@@ -195,6 +195,7 @@ tbody tr:last-child td{border-bottom:none;}
 .p-pendiente{background:var(--info-light);color:var(--info);}
 .p-rata{background:var(--danger-light);color:#7a1a0a;}
 .p-aviso{background:#e8f3ed;color:#1a5c38;border:1px solid #1a6b47;}
+.p-referido{background:#e8f0fb;color:#5b3dc8;border:1px solid #8a6edc;}
 .tel-link{color:var(--info);font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;}
 .tel-link:hover{text-decoration:underline;}
 .date-warn{color:var(--warn);font-weight:500;}
@@ -303,11 +304,11 @@ const fbApp=initializeApp(FC);
 const auth=getAuth(fbApp);
 const db=getDatabase(fbApp);
 
-const ALL_STATUSES=['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata','Aviso enviado'];
+const ALL_STATUSES=['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata','Aviso enviado','Referido'];
 const CRUNCHY_STATUSES=['En uso','Caída','Libre','Cortar perfiles','1 aviso','2 aviso'];
 const CRUNCHY_SC={'En uso':'p-activado','Caída':'p-vencido','Libre':'p-pendiente','Cortar perfiles':'p-cortado','1 aviso':'p-cobrar','2 aviso':'p-rata'};
-const SC={Activado:'p-activado',Cobrar:'p-cobrar',Vencido:'p-vencido',Cortado:'p-cortado',VIP:'p-vip',Sospechoso:'p-sospechoso',Pendiente:'p-pendiente',Rata:'p-rata','Aviso enviado':'p-aviso'};
-const SE={Sospechoso:'🕵️',Rata:'🐀',VIP:'👑'};
+const SC={Activado:'p-activado',Cobrar:'p-cobrar',Vencido:'p-vencido',Cortado:'p-cortado',VIP:'p-vip',Sospechoso:'p-sospechoso',Pendiente:'p-pendiente',Rata:'p-rata','Aviso enviado':'p-aviso','Referido':'p-referido'};
+const SE={Sospechoso:'🕵️',Rata:'🐀',VIP:'👑',Referido:'🤝'};
 const GROUP_COLORS=['#1a6b47','#1a4f6b','#5b3dc8','#b45309','#c0392b','#9b3060','#2d6b5a','#6b4a1a'];
 
 // Default groups baked in
@@ -1202,6 +1203,7 @@ window.openEdit=function(id){
   document.getElementById('e-status').innerHTML=gStatuses.map(s=>`<option${c.status===s?' selected':''}>${s}</option>`).join('');
   document.getElementById('e-tipo').innerHTML=`<option value="">— Sin tipo —</option>`+ALL_STATUSES.map(s=>`<option${c.tipo===s?' selected':''}>${s}</option>`).join('');
   document.getElementById('e-group').innerHTML=Object.entries(allGroups()).map(([gid,gr])=>`<option value="${gid}"${(c.group||curGroup)===gid?' selected':''}>${gr.name}</option>`).join('');
+  document.getElementById('e-referidor').value=c.referidor||'';
   document.getElementById('e-notas').value=c.notas||'';
   document.getElementById('edit-modal').style.display='flex';
 };
@@ -1216,6 +1218,7 @@ window.saveEdit=async function(){
   const upd={nombre,telefono:phones[0],telefono2:phones[1]||'',telefonos:phones.slice(2),
     telegram:getDynValues('e-telegrams')[0]||'',telegrams:getDynValues('e-telegrams').slice(1),
     vencimiento:renewalDate,status:newStatus,tipo:document.getElementById('e-tipo').value,
+    referidor:document.getElementById('e-referidor').value.trim(),
     notas:document.getElementById('e-notas').value.trim(),group:newGroup,
     correo:document.getElementById('e-correo')?document.getElementById('e-correo').value.trim():(contacts[editId]?.correo||''),
     password:document.getElementById('e-password')?document.getElementById('e-password').value.trim():(contacts[editId]?.password||''),
@@ -1524,6 +1527,7 @@ if(saved){
         <div class="form-group full" id="renewal-box"></div>
         <div class="form-group"><label>Estado</label><select id="f-status"></select></div>
         <div class="form-group"><label>Tipo</label><select id="f-tipo"><option value="">— Sin tipo —</option><option>VIP</option><option>Sospechoso</option><option>Rata</option><option>Pendiente</option></select></div>
+        <div class="form-group"><label>Referidor <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-hint)">¿Quién lo trajo?</span></label><input id="f-referidor" placeholder="Nombre del referidor"></div>
         <div class="form-group full"><label>Notas</label><textarea id="f-notas"></textarea></div>
       </div>
       <div class="modal-footer">
@@ -1551,6 +1555,7 @@ if(saved){
       <div class="form-group full" id="renewal-box-edit"></div>
       <div class="form-group"><label>Estado</label><select id="e-status"></select></div>
       <div class="form-group"><label>Tipo</label><select id="e-tipo"></select></div>
+      <div class="form-group"><label>Referidor</label><input id="e-referidor" placeholder="Nombre del referidor"></div>
       <div class="form-group full"><label>Mover a grupo</label><select id="e-group"></select></div>
       <div class="form-group full"><label>Notas</label><textarea id="e-notas"></textarea></div>
     </div>
