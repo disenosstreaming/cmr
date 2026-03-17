@@ -319,13 +319,13 @@ const DEFAULT_GROUPS={
 };
 
 const CATEGORIES={
-  'suscriptores':{name:'Suscriptores',icon:'👥',color:'#1a6b47'},
-  'cuentas':{name:'Cuentas',icon:'📺',color:'#f47521'},
-  'disenos':{name:'Diseños',icon:'🎨',color:'#9b59b6'},
-  'otro':{name:'Otro',icon:'📁',color:'#5a5852'}
+  'suscriptores':{name:'Suscriptores',icon:'👥',color:'#1a6b47',order:0},
+  'cuentas':{name:'Cuentas',icon:'📺',color:'#f47521',order:1},
+  'disenos':{name:'Diseños',icon:'🎨',color:'#9b59b6',order:2},
+  'otro':{name:'Otro',icon:'📁',color:'#5a5852',order:3}
 };
 
-let cu=null,contacts={},updates={},blacklist={},groups={};
+let cu=null,contacts={},updates={},blacklist={},groups={},userCategories={};
 let sf='vencimiento',sd=1,search='',fs='';
 let curGroup='peru',curTab='activos',detailId=null,editId=null;
 let page=1;const PS=50;
@@ -345,6 +345,11 @@ function getPhones(c){return[c.telefono,c.telefono2,...(c.telefonos||[])].filter
 function getTelegrams(c){return[c.telegram,...(c.telegrams||[])].filter(Boolean);}
 function getGroupStatuses(){const g=allGroups()[curGroup];return g?g.statuses:(g&&g.type==='crunchyroll'?CRUNCHY_STATUSES:ALL_STATUSES);}
 function allGroups(){return{...DEFAULT_GROUPS,...groups};}
+function allCategories(){
+  const merged={...CATEGORIES,...userCategories};
+  // Sort by order field
+  return Object.entries(merged).sort((a,b)=>(a[1].order||99)-(b[1].order||99));
+}
 
 function checkBL(nombre,phones,telegrams){
   const matches=[];
@@ -430,6 +435,11 @@ function listenData(){
   onValue(ref(db,'updates'),snap=>{updates=snap.val()||{};if(detailId)renderPanel();});
   onValue(ref(db,'blacklist'),snap=>{blacklist=snap.val()||{};if(curPage==='blacklist')renderBL();});
   onValue(ref(db,'groups'),snap=>{groups=snap.val()||{};renderSidebar();});
+  onValue(ref(db,'categories'),snap=>{
+    const saved=snap.val();
+    if(saved)Object.assign(userCategories,saved);
+    renderSidebar();
+  });
 }
 
 // ── SIDEBAR ──
@@ -447,8 +457,7 @@ function renderSidebar(){
   });
   
   // Render each category
-  const catOrder=['suscriptores','cuentas','disenos','otro'];
-  catOrder.forEach(catId=>{
+  allCategories().forEach(([catId,cat])=>{
     const grps=catGroups[catId];
     if(!grps||grps.length===0)return;
     const cat=CATEGORIES[catId]||{name:catId,icon:'📁',color:'#888'};
@@ -482,7 +491,8 @@ function renderSidebar(){
     <div class="nav-item${curPage==='blacklist'?' active':''}" onclick="navTo('blacklist')">
       <span class="nav-icon">🐀</span>Lista negra${blCount?`<span class="nav-badge">${blCount}</span>`:''}
     </div>
-    <div class="nav-item" onclick="openNewGroup()"><span class="nav-icon">＋</span>Nuevo grupo</div>`;
+    <div class="nav-item" onclick="openNewGroup()"><span class="nav-icon">＋</span>Nuevo grupo</div>
+    <div class="nav-item" onclick="openManageCategories()"><span class="nav-icon">⚙️</span>Categorías</div>`;
 }
 
 window.goGroup=function(gid,tab){
@@ -710,6 +720,9 @@ window.openNewGroup=function(){
   newGroupStatuses=new Set(ALL_STATUSES);
   newGroupColor=GROUP_COLORS[0];
   document.getElementById('ng-name').value='';
+  // Populate category select dynamically
+  document.getElementById('ng-category').innerHTML=allCategories()
+    .map(([cid,cat])=>`<option value="${cid}">${cat.icon||'📁'} ${cat.name}</option>`).join('');
   renderGroupForm('ng');
   document.getElementById('new-group-modal').style.display='flex';
 };
@@ -1570,6 +1583,107 @@ function renderBL(){
     </div>`;
   }).join('');
 }
+// ── CATEGORY MANAGEMENT ──
+window.openManageCategories=function(){
+  renderCatsList();
+  document.getElementById('manage-cats-modal').style.display='flex';
+};
+window.closeManageCategories=function(){
+  document.getElementById('manage-cats-modal').style.display='none';
+  renderSidebar();
+};
+
+function renderCatsList(){
+  const cats=allCategories();
+  document.getElementById('cats-list').innerHTML=cats.map(([cid,cat],idx)=>`
+    <div id="cat-row-${cid}" draggable="true" ondragstart="catDragStart('${cid}')" ondragover="catDragOver(event,'${cid}')" ondrop="catDrop(event,'${cid}')"
+      style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;cursor:grab;user-select:none;">
+      <span style="color:var(--text-hint);font-size:16px">⠿</span>
+      <span style="font-size:18px">${cat.icon||'📁'}</span>
+      <span style="flex:1;font-size:13px;font-weight:500">${cat.name}</span>
+      ${!CATEGORIES[cid]?`<button onclick="deleteCategory('${cid}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;padding:2px 6px;">🗑</button>`:''}
+    </div>`).join('');
+}
+
+let dragCat=null;
+window.catDragStart=function(cid){dragCat=cid;};
+window.catDragOver=function(e,cid){e.preventDefault();};
+window.catDrop=async function(e,targetCid){
+  e.preventDefault();
+  if(!dragCat||dragCat===targetCid)return;
+  // Reorder
+  const cats=allCategories();
+  const ids=cats.map(([cid])=>cid);
+  const fromIdx=ids.indexOf(dragCat);
+  const toIdx=ids.indexOf(targetCid);
+  ids.splice(fromIdx,1);ids.splice(toIdx,0,dragCat);
+  // Save new order
+  const updates={};
+  ids.forEach((cid,i)=>{
+    if(CATEGORIES[cid]){
+      if(!userCategories[cid])userCategories[cid]={...CATEGORIES[cid]};
+      userCategories[cid].order=i;
+      updates[`categories/${cid}`]={...userCategories[cid],order:i};
+    } else {
+      userCategories[cid].order=i;
+      updates[`categories/${cid}`]={...userCategories[cid],order:i};
+    }
+  });
+  await update(ref(db),updates);
+  renderCatsList();
+  dragCat=null;
+};
+
+window.addCategory=async function(){
+  const icon=document.getElementById('new-cat-icon').value.trim()||'📁';
+  const name=document.getElementById('new-cat-name').value.trim();
+  if(!name){toast('El nombre es obligatorio');return;}
+  const cid='cat_'+Date.now();
+  const order=allCategories().length;
+  await set(ref(db,`categories/${cid}`),{name,icon,color:'#5a5852',order,createdBy:cu.email});
+  document.getElementById('new-cat-icon').value='';
+  document.getElementById('new-cat-name').value='';
+  toast('Categoría creada ✓');
+};
+
+window.deleteCategory=async function(cid){
+  if(!confirm('¿Eliminar esta categoría? Los grupos no se borran.'))return;
+  await remove(ref(db,`categories/${cid}`));
+  delete userCategories[cid];
+  renderCatsList();
+  toast('Categoría eliminada');
+};
+
+// Change category from group menu
+window.changeCategoryFromMenu=function(){
+  const gid=document.getElementById('group-menu-modal').dataset.gid;
+  const ag=allGroups();const g=ag[gid];
+  document.getElementById('change-cat-group-name').textContent=g?.name||gid;
+  document.getElementById('change-cat-modal').dataset.gid=gid;
+  const cats=allCategories();
+  document.getElementById('change-cat-options').innerHTML=cats.map(([cid,cat])=>`
+    <div onclick="setCategoryForGroup('${gid}','${cid}')" 
+      style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;${g?.category===cid?'border-color:var(--accent);background:var(--accent-light)':''}"
+      onmouseenter="this.style.borderColor='var(--accent)';this.style.background='var(--accent-light)'"
+      onmouseleave="this.style.borderColor='${g?.category===cid?'var(--accent)':'var(--border)}'}';this.style.background='${g?.category===cid?'var(--accent-light)':'none'}'">
+      <span style="font-size:20px">${cat.icon||'📁'}</span>
+      <span style="font-size:13px;font-weight:500">${cat.name}</span>
+      ${g?.category===cid?'<span style="margin-left:auto;color:var(--accent)">✓</span>':''}
+    </div>`).join('');
+  closeGroupMenu();
+  document.getElementById('change-cat-modal').style.display='flex';
+};
+
+window.setCategoryForGroup=async function(gid,catId){
+  if(DEFAULT_GROUPS[gid]){
+    await set(ref(db,`groups/${gid}`),{...DEFAULT_GROUPS[gid],...(groups[gid]||{}),category:catId});
+  }else{
+    await update(ref(db,`groups/${gid}`),{category:catId});
+  }
+  document.getElementById('change-cat-modal').style.display='none';
+  toast('Categoría actualizada ✓');
+};
+
 window.openAddBL=function(){
   buildDynFields('bl-phones',[],'+51 9XX XXX XXX');
   buildDynFields('bl-telegrams',[],'@usuario');
@@ -1832,10 +1946,6 @@ if(saved){
       <div class="form-group full">
         <label>Categoría</label>
         <select id="ng-category" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;">
-          <option value="suscriptores">👥 Suscriptores</option>
-          <option value="cuentas">📺 Cuentas</option>
-          <option value="disenos">🎨 Diseños</option>
-          <option value="otro">📁 Otro</option>
         </select>
       </div>
       <div class="form-group full">
@@ -1875,6 +1985,7 @@ if(saved){
     <h2 id="grp-menu-name"></h2>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:.5rem">
       <button class="btn" onclick="editGroupFromMenu()">✏️ Editar nombre, color y estados</button>
+      <button class="btn" onclick="changeCategoryFromMenu()">📁 Cambiar categoría</button>
       <button class="btn red" id="grp-menu-del" onclick="deleteGroupFromMenu()">🗑 Eliminar grupo</button>
     </div>
     <div class="modal-footer"><button class="btn ghost" onclick="closeGroupMenu()">Cancelar</button></div>
@@ -1932,5 +2043,36 @@ if(saved){
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- MANAGE CATEGORIES MODAL -->
+<div class="overlay" id="manage-cats-modal" style="display:none" onclick="if(event.target===this)closeManageCategories()">
+  <div class="modal" style="max-width:480px">
+    <h2>⚙️ Gestionar categorías</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Arrastra para reordenar. Clic en ✏️ para editar.</p>
+    <div id="cats-list" style="margin-bottom:1rem"></div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+      <div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Nueva categoría</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="new-cat-icon" placeholder="Emoji" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:16px;background:var(--surface);color:var(--text);outline:none;text-align:center;">
+        <input id="new-cat-name" placeholder="Nombre de categoría" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);outline:none;">
+        <button class="btn green" onclick="addCategory()">Agregar</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn green" onclick="closeManageCategories()">Listo</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE CATEGORY MODAL -->
+<div class="overlay" id="change-cat-modal" style="display:none" onclick="if(event.target===this)document.getElementById('change-cat-modal').style.display='none'">
+  <div class="modal" style="max-width:360px">
+    <h2>📁 Cambiar categoría</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem" id="change-cat-group-name"></p>
+    <div id="change-cat-options" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="modal-footer"><button class="btn" onclick="document.getElementById('change-cat-modal').style.display='none'">Cancelar</button></div>
+  </div>
+</div>
+
 </body>
 </html>
