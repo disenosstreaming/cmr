@@ -1041,7 +1041,7 @@ function renderTable(){
         ${hasUp?`<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-left:4px"></span>`:''}
       </div></td>
       <td>${phoneHtml}</td>
-      <td class="${dc(c.vencimiento)}">${fd(c.vencimiento)}<span style="font-size:11px">${ds(c.vencimiento)}</span></td>
+      <td class="${dc(c.vencimiento)}" onclick="openQuickRenew('${c._id}',event)" style="cursor:pointer;white-space:nowrap" title="Clic para renovar">${fd(c.vencimiento)}<span style="font-size:11px">${ds(c.vencimiento)}</span> <span style="font-size:10px;opacity:.4">✏️</span></td>
       <td>${tgHtml}</td>
       <td><span class="pill ${SC[c.status]||''}" onclick="openMove('${c._id}')">${SE[c.status]||''} ${c.status||'—'}</span></td>
       <td><div class="actions">
@@ -1270,6 +1270,70 @@ window.saveRenewal=async function(id){
   if(!inp||!inp.value){toast('Selecciona una fecha');return;}
   await update(ref(db,`contacts/${id}`),{vencimiento:inp.value,updatedAt:new Date().toISOString(),updatedBy:cu.email});
   toast('Fecha actualizada ✓');renderPanel();
+};
+
+// QUICK RENEW POPUP (click on date in table)
+let _qrId=null,_qrDate='';
+window.qrAdd=function(n){
+  const base=_qrDate?new Date(_qrDate+'T00:00:00'):new Date();
+  base.setMonth(base.getMonth()+n);
+  const y=base.getFullYear(),m=String(base.getMonth()+1).padStart(2,'0'),d=String(base.getDate()).padStart(2,'0');
+  _qrDate=`${y}-${m}-${d}`;
+  const disp=document.getElementById('qr-date-display');
+  const inp=document.getElementById('qr-date-input');
+  if(disp){disp.textContent=fd(_qrDate);disp.style.color=du(_qrDate)!==null&&du(_qrDate)<0?'var(--danger)':'var(--accent)';}
+  if(inp)inp.value=_qrDate;
+};
+window.qrSave=async function(){
+  if(!_qrDate||!_qrId){toast('Selecciona una fecha');return;}
+  await update(ref(db,`contacts/${_qrId}`),{vencimiento:_qrDate,updatedAt:new Date().toISOString(),updatedBy:cu.email});
+  document.getElementById('quick-renew-tip')?.remove();
+  toast('✓ Fecha actualizada');
+  if(detailId===_qrId)renderPanel();
+};
+window.openQuickRenew=function(id,event){
+  event.stopPropagation();
+  const ex=document.getElementById('quick-renew-tip');if(ex)ex.remove();
+  const c=contacts[id];if(!c)return;
+  _qrId=id;
+  _qrDate=c.vencimiento||'';
+  const tip=document.createElement('div');
+  tip.id='quick-renew-tip';
+  const rect=event.currentTarget.getBoundingClientRect();
+  tip.style.cssText=`position:fixed;left:${Math.min(rect.left,window.innerWidth-300)}px;top:${rect.bottom+6}px;background:var(--surface);border:2px solid var(--accent);border-radius:10px;padding:14px;z-index:9999;box-shadow:0 4px 24px rgba(0,0,0,.3);width:290px;`;
+  const dateColor=du(_qrDate)!==null&&du(_qrDate)<0?'var(--danger)':'var(--accent)';
+  tip.innerHTML=`
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">📅 Renovar — <strong style="color:var(--text)">${c.nombre||'—'}</strong></div>
+    <div id="qr-date-display" style="font-size:14px;font-weight:500;font-family:'DM Mono',monospace;text-align:center;padding:6px;background:var(--bg);border-radius:6px;margin-bottom:10px;color:${dateColor}">${_qrDate?fd(_qrDate):'Sin fecha'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button onclick="qrAdd(-1)" style="flex:1;padding:5px 4px;border-radius:6px;border:1px solid var(--danger);background:none;cursor:pointer;font-size:12px;color:var(--danger);font-family:inherit">−1 mes</button>
+      <button onclick="qrAdd(1)" style="flex:1;padding:5px 4px;border-radius:6px;border:1px solid var(--border);background:none;cursor:pointer;font-size:12px;color:var(--text);font-family:inherit">+1 mes</button>
+      <button onclick="qrAdd(2)" style="flex:1;padding:5px 4px;border-radius:6px;border:1px solid var(--border);background:none;cursor:pointer;font-size:12px;color:var(--text);font-family:inherit">+2 meses</button>
+      <button onclick="qrAdd(3)" style="flex:1;padding:5px 4px;border-radius:6px;border:1px solid var(--border);background:none;cursor:pointer;font-size:12px;color:var(--text);font-family:inherit">+3 meses</button>
+      <button onclick="qrAdd(6)" style="flex:1;padding:5px 4px;border-radius:6px;border:1px solid var(--border);background:none;cursor:pointer;font-size:12px;color:var(--text);font-family:inherit">+6 meses</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input type="date" id="qr-date-input" value="${_qrDate}" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="qrSave()" style="flex:1;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500;font-family:inherit">💾 Guardar</button>
+      <button onclick="document.getElementById('quick-renew-tip')?.remove()" style="padding:7px 12px;background:none;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;color:var(--text-muted);font-family:inherit">✕</button>
+    </div>`;
+  document.body.appendChild(tip);
+  tip.querySelector('#qr-date-input').addEventListener('change',e=>{
+    _qrDate=e.target.value;
+    const disp=document.getElementById('qr-date-display');
+    if(disp){disp.textContent=fd(_qrDate);disp.style.color=du(_qrDate)<0?'var(--danger)':'var(--accent)';}
+  });
+  requestAnimationFrame(()=>{
+    const r=tip.getBoundingClientRect();
+    if(r.right>window.innerWidth)tip.style.left=(window.innerWidth-r.width-10)+'px';
+    if(r.bottom>window.innerHeight)tip.style.top=(rect.top-r.height-6)+'px';
+  });
+  setTimeout(()=>{
+    const h=(e)=>{if(!tip.contains(e.target)){tip.remove();document.removeEventListener('click',h);}};
+    document.addEventListener('click',h);
+  },100);
 };
 
 // TABS
