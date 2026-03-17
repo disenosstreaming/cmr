@@ -980,8 +980,15 @@ window.importExcel=async function(event){
         // Check blacklist
         const blMatches=checkBL(nombre,[tel,tel2].filter(Boolean),[tg].filter(Boolean));
         
+        // Determine status from Excel or default to Activado
+        let contactStatus='Activado';
+        if(colStatus>=0&&row[colStatus]){
+          const rawStatus=String(row[colStatus]).trim().toLowerCase();
+          contactStatus=statusMap[rawStatus]||'Activado';
+        }
+        
         pushOps.push({nombre,telefono:tel,telefono2:tel2,telegram:tg,vencimiento:venc,
-          status:'Activado',tipo,notas:'',group:curGroup,
+          status:contactStatus,tipo,notas:'',group:curGroup,
           createdAt:new Date().toISOString(),createdBy:cu.email,
           _blMatches:blMatches});
         imported++;
