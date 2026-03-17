@@ -882,8 +882,13 @@ function getFiltered(){
     else if(curTab==='cortados')arr=arr.filter(c=>isCrunchyGrp?c.status==='Cortar perfiles':c.status==='Cortado');
   }
   if(search){
-    const q=search.toLowerCase();
-    arr=arr.filter(c=>(c.nombre||'').toLowerCase().includes(q)||getPhones(c).some(p=>p.includes(search))||getTelegrams(c).some(t=>t.toLowerCase().includes(q)));
+    const q=search.toLowerCase().replace(/[+\s\-().]/g,'');
+    arr=arr.filter(c=>
+      (c.nombre||'').toLowerCase().includes(search.toLowerCase())||
+      getPhones(c).some(p=>p.replace(/[+\s\-().]/g,'').includes(q))||
+      getTelegrams(c).some(t=>t.toLowerCase().includes(search.toLowerCase()))||
+      (c.correo||'').toLowerCase().includes(search.toLowerCase())
+    );
   }
   arr.sort((a,b)=>{let va=a[sf]||'',vb=b[sf]||'';if(sf==='vencimiento'){va=new Date(va||'9999');vb=new Date(vb||'9999');}return va>vb?sd:va<vb?-sd:0;});
   return arr;
