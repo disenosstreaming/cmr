@@ -842,19 +842,25 @@ window.saveNewGroup=async function(){
   const ngCat=document.getElementById('ng-category')?.value||'otro';
   const isDiseno=ngCat==='disenos';
   const groupData={
-    name,color:newGroupColor,
+    name,
+    color:newGroupColor,
     statuses:isDiseno?['Pendiente','En proceso','Realizado','Fútbol','Cancelado']:[...newGroupStatuses],
-    createdAt:Date.now(),createdBy:cu.email,
-    category:ngCat,
-    type:isDiseno?'diseno':undefined
+    createdAt:Date.now(),
+    createdBy:cu.email,
+    category:ngCat
   };
-  // Add to local memory immediately so navigation works before Firebase listener fires
-  groups[gid]=groupData;
-  await set(ref(db,`groups/${gid}`),groupData);
-  closeNewGroup();
-  toast(`Grupo "${name}" creado ✓`);
-  if(isDiseno) goDiseno(gid);
-  else goGroup(gid,'activos');
+  if(isDiseno) groupData.type='diseno';
+  try{
+    groups[gid]=groupData;
+    await set(ref(db,`groups/${gid}`),groupData);
+    closeNewGroup();
+    toast(`Grupo "${name}" creado ✓`);
+    if(isDiseno) goDiseno(gid);
+    else goGroup(gid,'activos');
+  }catch(err){
+    toast('Error al crear grupo: '+err.message);
+    delete groups[gid];
+  }
 };
 
 // EDIT GROUP
@@ -1834,10 +1840,12 @@ window.addCategory=async function(){
   if(!name){toast('El nombre es obligatorio');return;}
   const cid='cat_'+Date.now();
   const order=allCategories().length;
-  await set(ref(db,`categories/${cid}`),{name,icon,color:'#5a5852',order,createdBy:cu.email});
-  document.getElementById('new-cat-icon').value='';
-  document.getElementById('new-cat-name').value='';
-  toast('Categoría creada ✓');
+  try{
+    await set(ref(db,`categories/${cid}`),{name,icon,color:'#5a5852',order,createdBy:cu.email});
+    document.getElementById('new-cat-icon').value='';
+    document.getElementById('new-cat-name').value='';
+    toast('Categoría creada ✓');
+  }catch(err){toast('Error: '+err.message);}
 };
 
 window.deleteCategory=async function(cid){
