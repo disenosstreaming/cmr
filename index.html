@@ -860,6 +860,7 @@ function renderTabs(){
     {k:'vencidos',l:isCG4?'Caídas':'Vencidos'},
     {k:'porvencer',l:'Por vencer'},
     {k:'cortados',l:isCG4?'Cortar perfiles':'Cortados ✂️'},
+    {k:'avisados',l:'📢 Avisados'},
     {k:'todos',l:'Todos'}
   ];
   document.getElementById('tab-bar').innerHTML=tabs.map(t=>`
@@ -880,6 +881,7 @@ function getFiltered(){
     else if(curTab==='vencidos')arr=arr.filter(c=>isCrunchyGrp?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0));
     else if(curTab==='porvencer')arr=arr.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;});
     else if(curTab==='cortados')arr=arr.filter(c=>isCrunchyGrp?c.status==='Cortar perfiles':c.status==='Cortado');
+    else if(curTab==='avisados')arr=arr.filter(c=>c.status==='Aviso enviado');
   }
   if(search){
     const q=search.toLowerCase().replace(/[+\s\-().]/g,'');
@@ -1209,7 +1211,9 @@ window.importExcel=async function(event){
       
       const colNombre=getCol(['nombre','name']);
       const colTel=getCol(['teléfono','telefono','phone','tel']);
-      const colTel2=getCol(['segundo','second','2do','tel2']);
+      const colTel2=getCol(['segundo','second','2do','tel2','segundo número']);
+      const colTel3=getCol(['tercer','third','3er','tel3','tercer número']);
+      const colTel4=getCol(['4to','cuarto','fourth','tel4','4to número']);
       const colTg=getCol(['telegram','usuario de telegram']);
       const colVenc=getCol(['vencimiento','venc','fecha']);
       const colTipo=getCol(['tipo','type']);
@@ -1238,10 +1242,17 @@ window.importExcel=async function(event){
         // Use placeholder if no name
         if(!nombre)nombre='Sin nombre (fila '+(pushOps.length+1)+')'  ;
         
-        let tel=colTel>=0?String(row[colTel]||'').trim():'';
-        if(tel&&!tel.startsWith('+')&&tel.length>6)tel='+'+tel.replace(/\D/g,'');
-        let tel2=colTel2>=0?String(row[colTel2]||'').trim():'';
-        if(tel2&&!tel2.startsWith('+')&&tel2.length>6)tel2='+'+tel2.replace(/\D/g,'');
+        const parsePhone=(raw)=>{
+          let t=String(raw||'').trim();
+          if(!t||t==='-'||t==='None')return'';
+          t=t.replace(/[^0-9+]/g,'');
+          if(t&&!t.startsWith('+')&&t.length>6)t='+'+t;
+          return t;
+        };
+        const tel=colTel>=0?parsePhone(row[colTel]):'';
+        const tel2=colTel2>=0?parsePhone(row[colTel2]):'';
+        const tel3=colTel3>=0?parsePhone(row[colTel3]):'';
+        const tel4=colTel4>=0?parsePhone(row[colTel4]):'';
         
         let venc='';
         if(colVenc>=0&&row[colVenc]){
@@ -1270,7 +1281,8 @@ window.importExcel=async function(event){
           contactStatus=statusMap[rawStatus]||'Activado';
         }
         
-        pushOps.push({nombre,telefono:tel,telefono2:tel2,telegram:tg,vencimiento:venc,
+        const extraTels=[tel2,tel3,tel4].filter(Boolean);
+        pushOps.push({nombre,telefono:tel,telefono2:extraTels[0]||'',telefonos:extraTels.slice(1),telegram:tg,vencimiento:venc,
           status:contactStatus,tipo,notas:'',group:curGroup,
           createdAt:new Date().toISOString(),createdBy:cu.email,
           _blMatches:blMatches});
@@ -1950,7 +1962,7 @@ if(saved){
           <div class="stat" data-filter="vencidos" onclick="switchTab('vencidos')"><div class="stat-label">⏰ Vencidos</div><div class="stat-val c-red" id="s-vencidos">0</div></div>
           <div class="stat" data-filter="porvencer" onclick="switchTab('porvencer')"><div class="stat-label">⚡ Hoy/mañana</div><div class="stat-val c-amber" id="s-porvencer">0</div></div>
           <div class="stat" data-filter="cortados" onclick="switchTab('cortados')"><div class="stat-label">✂️ Cortados</div><div class="stat-val c-gray" id="s-cortados">0</div></div>
-          <div class="stat" data-filter="avisados" onclick="doFilter('Aviso enviado')" style="border-left:3px solid var(--accent)"><div class="stat-label">📢 Avisados</div><div class="stat-val c-green" id="s-avisados">0</div></div>
+          <div class="stat" data-filter="avisados" onclick="switchTab('avisados')"><div class="stat-label">📢 Avisados</div><div class="stat-val c-green" id="s-avisados">0</div></div>
         </div>
         <div class="tabs" id="tab-bar"></div>
         <div class="toolbar" style="padding:8px 0;">
