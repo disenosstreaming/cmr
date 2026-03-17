@@ -173,7 +173,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 /* TABLE */
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;overflow-x:auto;}
 table{width:100%;border-collapse:collapse;min-width:800px;}
-thead th{padding:9px 12px;text-align:left;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:var(--thead-top,240px);z-index:10;}
+thead th{padding:9px 12px;text-align:left;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
 thead th:hover{color:var(--text);}
 tbody tr{transition:background .1s;}
 tbody tr:hover td{background:var(--bg);}
@@ -977,14 +977,6 @@ function renderTable(){
       </div></td>
     </tr>`;
   }).join('');
-  // Set sticky thead top dynamically based on sticky header height
-  requestAnimationFrame(()=>{
-    const sh=document.getElementById('sticky-header');
-    if(sh){
-      const h=sh.getBoundingClientRect().height+50;
-      document.documentElement.style.setProperty('--thead-top', h+'px');
-    }
-  });
   document.getElementById('pagination').innerHTML=`
     <div style="display:flex;align-items:center;gap:8px">
       <input type="checkbox" class="cb" onchange="selAll(this.checked)">
