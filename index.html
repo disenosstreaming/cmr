@@ -529,7 +529,7 @@ function renderAll(){
   const gc=Object.values(contacts).filter(c=>c.group===curGroup);
   const ag3=allGroups();const cg3=ag3[curGroup];const isCG=cg3&&cg3.type==='crunchyroll';
   const st={
-    activos:gc.filter(c=>isCG?c.status==='En uso':c.status==='Activado').length,
+    activos:gc.filter(c=>isCG?c.status==='En uso':c.status!=='Cortado').length,
     vencidos:gc.filter(c=>isCG?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length,
     porvencer:gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length,
     cortados:gc.filter(c=>isCG?c.status==='Cortar perfiles':c.status==='Cortado').length,
@@ -575,7 +575,7 @@ function getFiltered(){
   const isCrunchyGrp=cg&&cg.type==='crunchyroll';
   if(fs)arr=arr.filter(c=>c.status===fs);
   else{
-    if(curTab==='activos')arr=arr.filter(c=>isCrunchyGrp?c.status==='En uso':c.status==='Activado');
+    if(curTab==='activos')arr=arr.filter(c=>isCrunchyGrp?c.status==='En uso':c.status!=='Cortado');
     else if(curTab==='vencidos')arr=arr.filter(c=>isCrunchyGrp?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0));
     else if(curTab==='porvencer')arr=arr.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;});
     else if(curTab==='cortados')arr=arr.filter(c=>isCrunchyGrp?c.status==='Cortar perfiles':c.status==='Cortado');
