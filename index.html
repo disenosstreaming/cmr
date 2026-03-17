@@ -1388,6 +1388,7 @@ window.importExcel=async function(event){
       const colVenc=getCol(['vencimiento','venc','fecha']);
       const colTipo=getCol(['tipo','type']);
       const colStatus=getCol(['estado','status','tipo de estado']);
+      const colNotas=getCol(['notas','actualizaciones','updates','notes']);
       const statusMap={
         'activado':'Activado','active':'Activado','activo':'Activado','en uso':'En uso',
         'cobrar':'Cobrar','vencido':'Vencido','vencida':'Vencido',
@@ -1440,6 +1441,7 @@ window.importExcel=async function(event){
         
         const tg=colTg>=0?String(row[colTg]||'').trim():'';
         const tipo=colTipo>=0?String(row[colTipo]||'').trim():'';
+        const notasRaw=colNotas>=0?String(row[colNotas]||'').trim():'';
         
         // Check blacklist
         const blMatches=checkBL(nombre,[tel,tel2].filter(Boolean),[tg].filter(Boolean));
@@ -1455,7 +1457,7 @@ window.importExcel=async function(event){
         pushOps.push({nombre,telefono:tel,telefono2:extraTels[0]||'',telefonos:extraTels.slice(1),telegram:tg,vencimiento:venc,
           status:contactStatus,tipo,notas:'',group:curGroup,
           createdAt:new Date().toISOString(),createdBy:cu.email,
-          _blMatches:blMatches});
+          _blMatches:blMatches,_notasRaw:notasRaw});
         imported++;
       }
       
@@ -1516,10 +1518,10 @@ window.doImport=async function(ops,skipDupes,forceStatus){
     getPhones(c).forEach(p=>p&&existingPhones.add(norm(p)));
     getTelegrams(c).forEach(t=>t&&t.length>2&&existingTgs.add(norm(t)));
   });
-  let done=0,dupes=0;
+  let done=0,dupes=0,updsDone=0;
   const batch=[];
   for(const op of ops){
-    const {_blMatches,...data}=op;
+    const {_blMatches,_notasRaw,...data}=op;
     if(skipDupes){
       const phones=[data.telefono,data.telefono2].filter(Boolean);
       const tgs=[data.telegram].filter(Boolean);
@@ -1527,10 +1529,27 @@ window.doImport=async function(ops,skipDupes,forceStatus){
       if(isDupe){dupes++;continue;}
     }
     if(forceStatus)data.status=forceStatus;
-    batch.push(push(ref(db,'contacts'),data).then(()=>done++));
+    // Push contact and then save updates if any
+    const p=push(ref(db,'contacts'),data).then(async(snap)=>{
+      done++;
+      if(_notasRaw&&_notasRaw.trim()){
+        // Split multiple updates by separator ---
+        const entries=_notasRaw.split(/\n---\n/).map(s=>s.trim()).filter(Boolean);
+        const upBatch=entries.map(text=>
+          push(ref(db,`updates/${snap.key}`),{
+            text,
+            user:'Importado',
+            date:new Date().toLocaleString('es-PE')
+          }).then(()=>updsDone++)
+        );
+        await Promise.all(upBatch);
+      }
+    });
+    batch.push(p);
   }
   await Promise.all(batch);
-  toast(`✅ ${done} importados${dupes>0?' · '+dupes+' duplicados omitidos':''}`);
+  const updsMsg=updsDone>0?` · ${updsDone} actualizaciones importadas`:'';
+  toast(`✅ ${done} importados${dupes>0?' · '+dupes+' duplicados omitidos':''}${updsMsg}`);
 };
 
 window.bulkAviso=async function(){
