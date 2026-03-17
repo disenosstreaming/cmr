@@ -173,7 +173,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 /* TABLE */
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;overflow-x:auto;}
 table{width:100%;border-collapse:collapse;min-width:800px;}
-thead th{padding:9px 12px;text-align:left;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+thead th{padding:9px 12px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text);background:var(--border);border-bottom:2px solid var(--border-strong);white-space:nowrap;cursor:pointer;user-select:none;}
 thead th:hover{color:var(--text);}
 tbody tr{transition:background .1s;}
 tbody tr:hover td{background:var(--bg);}
@@ -928,10 +928,11 @@ function renderTable(){
     <th style="width:36px"></th>
     <th onclick="doSort('nombre')" style="cursor:pointer">👤 Contacto ${sf==='nombre'?sd===1?'↑':'↓':''}</th>
     <th>📞 Teléfonos</th>
-    <th onclick="doSort('vencimiento')" style="cursor:pointer">📅 Vencimiento ${sf==='vencimiento'?sd===1?'↑':'↓':''}</th>
-    <th>✈️ Telegram</th>
+    <th onclick="doSort('vencimiento')" style="cursor:pointer">📅 Fecha de vencimiento ${sf==='vencimiento'?sd===1?'↑':'↓':''}</th>
+    <th>✈️ Usuario de Telegram</th>
     <th onclick="doSort('status')" style="cursor:pointer">🔵 Estado ${sf==='status'?sd===1?'↑':'↓':''}</th>
-    <th>⚙️ Acciones</th>`;}
+    <th>⚙️ Acciones</th>
+  `;}
   const all=getFiltered();
   const tp=Math.ceil(all.length/PS)||1;
   if(page>tp)page=1;
@@ -953,7 +954,7 @@ function renderTable(){
       :wasVIP?`<span class="fue-vip-badge" title="Fue VIP anteriormente">👑 fue VIP</span>`
       :wasNoEsperar?`<span class="fue-noesperar-badge" title="⚠ Este cliente estuvo marcado como No Esperar">✂️ no esperar</span>`:'';
     const allPhones=getPhones(c);
-  const isCrunchyContact=c.tipo==='crunchyroll';
+    const isCrunchyContact=c.tipo==='crunchyroll';
     const phoneHtml=allPhones.length?`<a href="tel:${allPhones[0]}" class="tel-link">${allPhones[0]}</a>${allPhones.length>1?` <span style="font-size:10px;color:var(--text-hint)">+${allPhones.length-1}</span>`:''}`:'—';
     return`<tr class="${rc(c)}${isSel?' sel-row':''}">
       <td><input type="checkbox" class="cb" ${isSel?'checked':''} onchange="toggleSel('${c._id}',this.checked)"></td>
@@ -2028,12 +2029,12 @@ if(saved){
           <table>
             <thead><tr id="thead-row">
               <th style="width:36px"></th>
-              <th onclick="doSort('nombre')">Contacto</th>
-              <th>Teléfonos</th>
-              <th onclick="doSort('vencimiento')">Vencimiento</th>
-              <th>Telegram</th>
-              <th onclick="doSort('status')">Estado</th>
-              <th>Acciones</th>
+              <th onclick="doSort('nombre')">👤 Contacto</th>
+              <th>📞 Teléfonos</th>
+              <th onclick="doSort('vencimiento')">📅 Fecha de vencimiento</th>
+              <th>✈️ Usuario de Telegram</th>
+              <th onclick="doSort('status')">🔵 Estado</th>
+              <th>⚙️ Acciones</th>
             </tr></thead>
             <tbody id="tbody"></tbody>
           </table>
