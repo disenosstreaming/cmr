@@ -722,7 +722,7 @@ function renderCrunchyTable(){
       <td><input type="checkbox" class="cb" ${isSel?'checked':''} onchange="toggleSel('${c._id}',this.checked)"></td>
       <td><div class="name-cell">
         <div class="avatar" style="background:#fff3e0;color:#f47521">${ini(c.nombre)}</div>
-        <span classclass="name-text open-detail" data-id="${c._id}">${c.nombre||'—'}</span>
+        <span class="name-text open-detail" data-id="${c._id}">${c.nombre||'—'}</span>
       </div></td>
       <td style="max-width:200px">
         ${c.correo?`<div class="copy-cell" data-copy="${c.correo.replace(/"/g,'&quot;')}" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s">
@@ -801,6 +801,23 @@ function buildRenewalBox(currentDate){
       <span style="font-size:12px;color:var(--text-hint)">o fecha exacta</span>
     </div>`;
 }
+window.addMonthsEdit=function(n){
+  const base=renewalDate?new Date(renewalDate+'T00:00:00'):new Date();
+  const startFrom=new Date(base);
+  startFrom.setMonth(startFrom.getMonth()+n);
+  const y=startFrom.getFullYear(),m=String(startFrom.getMonth()+1).padStart(2,'0'),d=String(startFrom.getDate()).padStart(2,'0');
+  renewalDate=`${y}-${m}-${d}`;
+  const disp=document.getElementById('renewal-display-e');
+  const inp=document.getElementById('renewal-input-e');
+  if(disp)disp.textContent=fd(renewalDate);
+  if(inp)inp.value=renewalDate;
+  if(disp){disp.style.background='var(--accent-light)';setTimeout(()=>disp.style.background='',500);}
+};
+window.setRenewalDateEdit=function(v){
+  renewalDate=v;
+  const disp=document.getElementById('renewal-display-e');
+  if(disp)disp.textContent=fd(v)||'Sin fecha';
+};
 window.addMonths=function(n){
   const base=renewalDate?new Date(renewalDate+'T00:00:00'):new Date();
   const startFrom=new Date(base);
@@ -923,14 +940,14 @@ window.openEdit=function(id){
     editRenewalBox.innerHTML=`
       <div class="renewal-label">Fecha de vencimiento</div>
       <div class="renewal-row">
-        <div class="renewal-date" id="renewal-display">${renewalDate?fd(renewalDate):'Sin fecha'}</div>
-        <button type="button" class="month-btn" onclick="addMonths(-1)" style="color:var(--danger);border-color:var(--danger)">−1</button>
-        <button type="button" class="month-btn" onclick="addMonths(1)">+1 mes</button>
-        <button type="button" class="month-btn" onclick="addMonths(3)">+3 meses</button>
-        <button type="button" class="month-btn" onclick="addMonths(6)">+6 meses</button>
+        <div class="renewal-date" id="renewal-display-e">${renewalDate?fd(renewalDate):'Sin fecha'}</div>
+        <button type="button" class="month-btn" onclick="addMonthsEdit(-1)" style="color:var(--danger);border-color:var(--danger)">−1</button>
+        <button type="button" class="month-btn" onclick="addMonthsEdit(1)">+1 mes</button>
+        <button type="button" class="month-btn" onclick="addMonthsEdit(3)">+3 meses</button>
+        <button type="button" class="month-btn" onclick="addMonthsEdit(6)">+6 meses</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-        <input type="date" id="renewal-input" value="${renewalDate}" style="font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;font-family:inherit;" onchange="setRenewalDate(this.value)">
+        <input type="date" id="renewal-input-e" value="${renewalDate}" style="font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;font-family:inherit;" onchange="setRenewalDateEdit(this.value)">
         <span style="font-size:12px;color:var(--text-hint)">o fecha exacta</span>
       </div>`;
   }
