@@ -306,6 +306,7 @@ tbody tr.row-noesperar td{animation:noEsperarPulse 2s ease-in-out infinite;}
 .fue-rata-badge .rat-emoji{display:inline-block;animation:ratShake 0.6s ease-in-out infinite;animation-play-state:paused;}
 .fue-rata-badge:hover .rat-emoji{animation-play-state:running;}
 .fue-vip-badge{display:inline-flex;align-items:center;gap:2px;font-size:10px;background:var(--purple-light);color:var(--purple);padding:1px 6px;border-radius:20px;margin-left:4px;}
+.fue-noesperar-badge{display:inline-flex;align-items:center;gap:2px;font-size:10px;background:#fff0e0;color:#c05000;border:1px solid #e07030;padding:1px 6px;border-radius:20px;margin-left:4px;}
 @media(max-width:768px){.sidebar{display:none;}.stats{grid-template-columns:repeat(2,1fr);}.side-panel{width:100%;}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -944,11 +945,13 @@ function renderTable(){
     const hist=c.statusHistory?Object.values(c.statusHistory):[];
     const wasRata=hist.some(h=>h.from==='Rata')||c.tipo==='Rata';
     const wasVIP=hist.some(h=>h.from==='VIP')||c.tipo==='VIP';
+    const wasNoEsperar=c.status!=='No esperar'&&(hist.some(h=>h.from==='No esperar'||h.to==='No esperar'));
     const isNoEsperar=c.status==='No esperar';
     const isNoEsperarVenc=isNoEsperar&&du(c.vencimiento)!==null&&du(c.vencimiento)<=0;
     const noEsperarBadge=isNoEsperarVenc?`<span class="no-esperar-badge" title="¡No esperar! Ya venció"><span class="sc-emoji">✂️</span> NO ESPERAR</span>`:'';
     const prevBadge=wasRata?`<span class="fue-rata-badge" title="¡Ojo! Este contacto fue Rata anteriormente"><span class="rat-emoji">🐀</span> fue rata</span>`
-      :wasVIP?`<span class="fue-vip-badge" title="Fue VIP anteriormente">👑 fue VIP</span>`:'';
+      :wasVIP?`<span class="fue-vip-badge" title="Fue VIP anteriormente">👑 fue VIP</span>`
+      :wasNoEsperar?`<span class="fue-noesperar-badge" title="⚠ Este cliente estuvo marcado como No Esperar">✂️ no esperar</span>`:'';
     const allPhones=getPhones(c);
   const isCrunchyContact=c.tipo==='crunchyroll';
     const phoneHtml=allPhones.length?`<a href="tel:${allPhones[0]}" class="tel-link">${allPhones[0]}</a>${allPhones.length>1?` <span style="font-size:10px;color:var(--text-hint)">+${allPhones.length-1}</span>`:''}`:'—';
