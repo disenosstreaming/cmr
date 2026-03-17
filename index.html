@@ -199,6 +199,8 @@ tbody tr:last-child td{border-bottom:none;}
 .p-noesperar{background:#fff0e0;color:#c05000;border:1px solid #e07030;}
 .p-noesperar{background:#fff0e0;color:#c0390b;border:1px solid #e07030;}
 .tel-link{color:var(--info);font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;}
+tbody tr:hover .copy-cell-btn{opacity:.6 !important;}
+tbody tr:hover .copy-cell-btn:hover{opacity:1 !important;background:var(--accent-light) !important;}
 .tel-link:hover{text-decoration:underline;}
 .date-warn{color:var(--warn);font-weight:500;}
 .date-expired{color:var(--danger);}
@@ -374,9 +376,13 @@ function getTelegrams(c){return[c.telegram,...(c.telegrams||[])].filter(Boolean)
 function getGroupStatuses(){const g=allGroups()[curGroup];return g?g.statuses:(g&&g.type==='crunchyroll'?CRUNCHY_STATUSES:ALL_STATUSES);}
 function allGroups(){return{...DEFAULT_GROUPS,...groups};}
 function allCategories(){
-  const merged={...CATEGORIES,...userCategories};
-  // Sort by order field
-  return Object.entries(merged).sort((a,b)=>(a[1].order||99)-(b[1].order||99));
+  const merged={};
+  Object.entries(CATEGORIES).forEach(([k,v])=>{ merged[k]={...v,...(userCategories[k]||{})}; });
+  Object.entries(userCategories).forEach(([k,v])=>{ if(!merged[k]&&v&&v.name)merged[k]=v; });
+  // Filter out corrupt entries (must have a valid name and not be a contact/group data)
+  return Object.entries(merged)
+    .filter(([k,v])=>v&&typeof v.name==='string'&&v.name.length<60&&!v.telefono&&!v.status&&!v.group)
+    .sort((a,b)=>(a[1].order!=null?a[1].order:99)-(b[1].order!=null?b[1].order:99));
 }
 
 function checkBL(nombre,phones,telegrams){
@@ -465,7 +471,21 @@ function listenData(){
   onValue(ref(db,'groups'),snap=>{groups=snap.val()||{};renderSidebar();});
   onValue(ref(db,'categories'),snap=>{
     const saved=snap.val();
-    if(saved)Object.assign(userCategories,saved);
+    userCategories={};
+    if(saved){
+      const validKeys=new Set(Object.keys(CATEGORIES));
+      Object.entries(saved).forEach(([k,v])=>{
+        const isValid = v && typeof v==='object' && typeof v.name==='string' 
+          && v.name.length<=60 && !v.telefono && !v.status && !v.group 
+          && !v.correo && !v.nombre && !v.telegram;
+        if(isValid){
+          userCategories[k]=v;
+        } else {
+          // Auto-delete corrupt entry
+          remove(ref(db,`categories/${k}`));
+        }
+      });
+    }
     renderSidebar();
   });
 }
@@ -478,8 +498,11 @@ function renderSidebar(){
   
   // Group by category
   const catGroups={};
-  Object.entries(ag).sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0)).forEach(([gid,g])=>{
-    const cat=g.category||'otro';
+  Object.entries(ag).sort((a,b)=>(a[1].order!=null?a[1].order:a[1].createdAt||0)-(b[1].order!=null?b[1].order:b[1].createdAt||0)).forEach(([gid,g])=>{
+    // type='diseno' groups default to 'disenos' category if not explicitly set
+    let cat=g.category||'otro';
+    if(!cat&&g.type==='diseno')cat='disenos';
+    if(g.type==='diseno'&&cat==='otro')cat='disenos';
     if(!catGroups[cat])catGroups[cat]=[];
     catGroups[cat].push([gid,g]);
   });
@@ -499,9 +522,15 @@ function renderSidebar(){
       const venc=gc.filter(c=>isCGB?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length;
       const pv=gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length;
       const isActive=curGroup===gid&&curPage==='crm';
-      // Special handling for diseños groups
       const isDisenoGroup=g&&g.type==='diseno';
-      html+=`<div class="nav-item${isActive?' active':''}" onclick="${isDisenoGroup?`goDiseno('${gid}')`:`goGroup('${gid}','activos')`}" style="margin:2px .5rem;border-radius:var(--r);padding:7px 10px;">
+      html+=`<div class="nav-item${isActive?' active':''}" 
+        draggable="true"
+        ondragstart="grpDragStart(event,'${gid}','${catId}')"
+        ondragover="grpDragOver(event)"
+        ondrop="grpDrop(event,'${gid}','${catId}')"
+        ondragend="grpDragEnd(event)"
+        onclick="${isDisenoGroup?`goDiseno('${gid}')`:`goGroup('${gid}','activos')`}" 
+        style="margin:2px .5rem;border-radius:var(--r);padding:7px 10px;cursor:grab;">
         <div style="background:${g.color||'#888'};width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
         <span style="flex:1;font-size:13px;margin-left:6px">${g.name}</span>
         ${venc&&!isDisenoGroup?`<span class="nav-badge">${venc}</span>`:''}
@@ -777,8 +806,10 @@ window.openNewGroup=function(){
   newGroupStatuses=new Set(ALL_STATUSES);
   newGroupColor=GROUP_COLORS[0];
   document.getElementById('ng-name').value='';
-  // Populate category select dynamically
-  document.getElementById('ng-category').innerHTML=allCategories()
+  // Always use hardcoded CATEGORIES as base, then merge valid userCategories on top
+  const validCats=allCategories().filter(([,v])=>v&&v.name&&!v.telefono&&!v.status);
+  const catsToShow=validCats.length>0?validCats:Object.entries(CATEGORIES);
+  document.getElementById('ng-category').innerHTML=catsToShow
     .map(([cid,cat])=>`<option value="${cid}">${cat.icon||'📁'} ${cat.name}</option>`).join('');
   renderGroupForm('ng');
   document.getElementById('new-group-modal').style.display='flex';
@@ -811,15 +842,20 @@ window.saveNewGroup=async function(){
   const gid='g_'+Date.now();
   const ngCat=document.getElementById('ng-category')?.value||'otro';
   const isDiseno=ngCat==='disenos';
-  await set(ref(db,`groups/${gid}`),{
+  const groupData={
     name,color:newGroupColor,
     statuses:isDiseno?['Pendiente','En proceso','Realizado','Fútbol','Cancelado']:[...newGroupStatuses],
     createdAt:Date.now(),createdBy:cu.email,
     category:ngCat,
     type:isDiseno?'diseno':undefined
-  });
-  closeNewGroup();toast(`Grupo "${name}" creado ✓`);
-  goGroup(gid,'activos');
+  };
+  // Add to local memory immediately so navigation works before Firebase listener fires
+  groups[gid]=groupData;
+  await set(ref(db,`groups/${gid}`),groupData);
+  closeNewGroup();
+  toast(`Grupo "${name}" creado ✓`);
+  if(isDiseno) goDiseno(gid);
+  else goGroup(gid,'activos');
 };
 
 // EDIT GROUP
@@ -965,12 +1001,31 @@ function renderTable(){
       :wasNoEsperar?`<span class="fue-noesperar-badge" title="⚠ Este cliente estuvo marcado como No Esperar">✂️ no esperar</span>`:'';
     const allPhones=getPhones(c);
   const isCrunchyContact=c.tipo==='crunchyroll';
-    const phoneHtml=allPhones.length?`<a href="tel:${allPhones[0]}" class="tel-link">${allPhones[0]}</a>${allPhones.length>1?` <span style="font-size:10px;color:var(--text-hint)">+${allPhones.length-1}</span>`:''}`:'—';
+    const phone0=allPhones[0]||'';
+    const phoneHtml=allPhones.length
+      ?`<div class="copy-cell" data-copy="${phone0.replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s">
+          <span class="tel-link">${phone0}</span>
+          ${allPhones.length>1?`<span style="font-size:10px;color:var(--text-hint)">+${allPhones.length-1}</span>`:''}
+          <span style="font-size:11px;color:var(--accent);flex-shrink:0">📋</span>
+        </div>`
+      :'—';
+    const tg0=getTelegrams(c)[0]||'';
+    const tgHtml=tg0
+      ?`<div class="copy-cell" data-copy="${tg0.replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s;max-width:150px">
+          <span style="color:var(--purple);font-size:12px;overflow:hidden;text-overflow:ellipsis">${tg0}</span>
+          <span style="font-size:11px;color:var(--accent);flex-shrink:0">📋</span>
+        </div>`
+      :'—';
+    const nombreVal=(c.nombre||'').replace(/"/g,'&quot;');
     return`<tr class="${rc(c)}${isSel?' sel-row':''}">
       <td><input type="checkbox" class="cb" ${isSel?'checked':''} onchange="toggleSel('${c._id}',this.checked)"></td>
       <td><div class="name-cell">
         <div class="avatar">${ini(c.nombre)}</div>
-        <span class="name-text open-detail" data-id="${c._id}">${c.nombre||'—'}</span>
+        <div style="display:inline-flex;align-items:center;gap:4px">
+          <span class="name-text open-detail" data-id="${c._id}" style="cursor:pointer">${c.nombre||'—'}</span>
+          ${c.nombre?`<div class="copy-cell" data-copy="${nombreVal}" style="display:inline-flex;align-items:center;cursor:pointer;padding:2px 4px;border-radius:6px;border:1px solid transparent;transition:all .15s" title="Copiar nombre"><span style="font-size:11px;color:var(--accent);opacity:.5">📋</span></div>`:''}
+        </div>
+        <span class="open-detail" data-id="${c._id}" style="position:absolute;opacity:0;pointer-events:none"></span>
         ${emoji?`<span style="font-size:13px;margin-left:2px">${emoji}</span>`:''}
         ${prevBadge}
         ${noEsperarBadge}
@@ -978,7 +1033,7 @@ function renderTable(){
       </div></td>
       <td>${phoneHtml}</td>
       <td class="${dc(c.vencimiento)}">${fd(c.vencimiento)}<span style="font-size:11px">${ds(c.vencimiento)}</span></td>
-      <td style="color:var(--text-muted);font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis">${getTelegrams(c)[0]||'—'}</td>
+      <td>${tgHtml}</td>
       <td><span class="pill ${SC[c.status]||''}" onclick="openMove('${c._id}')">${SE[c.status]||''} ${c.status||'—'}</span></td>
       <td><div class="actions">
         ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=1))||(c.status==='Vencido'&&c.status!=='Aviso enviado')||(c.status==='Activado'&&du(c.vencimiento)<0)?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
@@ -1701,7 +1756,8 @@ window.closeManageCategories=function(){
 };
 
 function renderCatsList(){
-  const cats=allCategories();
+  // Only show valid categories (no corrupt Firebase data)
+  const cats=allCategories().filter(([,v])=>v&&v.name&&!v.telefono&&!v.status&&!v.group&&!v.correo&&!v.nombre);
   document.getElementById('cats-list').innerHTML=cats.map(([cid,cat],idx)=>`
     <div id="cat-row-${cid}" draggable="true" ondragstart="catDragStart('${cid}')" ondragover="catDragOver(event,'${cid}')" ondrop="catDrop(event,'${cid}')"
       style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;cursor:grab;user-select:none;">
@@ -1739,6 +1795,38 @@ window.catDrop=async function(e,targetCid){
   await update(ref(db),updates);
   renderCatsList();
   dragCat=null;
+};
+
+// ── GROUP DRAG & DROP ──
+let dragGid=null,dragGidCat=null;
+window.grpDragStart=function(e,gid,catId){
+  dragGid=gid;dragGidCat=catId;
+  e.dataTransfer.effectAllowed='move';
+  e.currentTarget.style.opacity='.4';
+};
+window.grpDragOver=function(e){e.preventDefault();e.dataTransfer.dropEffect='move';};
+window.grpDragEnd=function(e){e.currentTarget.style.opacity='';dragGid=null;dragGidCat=null;};
+window.grpDrop=async function(e,targetGid,targetCatId){
+  e.preventDefault();e.stopPropagation();
+  if(!dragGid||dragGid===targetGid)return;
+  // Only allow reorder within same category
+  if(dragGidCat!==targetCatId)return;
+  const ag=allGroups();
+  // Get all groups in this category, sorted by current order
+  const catGrps=Object.entries(ag)
+    .filter(([,g])=>(g.category||'otro')===targetCatId)
+    .sort((a,b)=>(a[1].order!=null?a[1].order:a[1].createdAt||0)-(b[1].order!=null?b[1].order:b[1].createdAt||0));
+  const ids=catGrps.map(([gid])=>gid);
+  const fromIdx=ids.indexOf(dragGid);
+  const toIdx=ids.indexOf(targetGid);
+  if(fromIdx<0||toIdx<0)return;
+  ids.splice(fromIdx,1);ids.splice(toIdx,0,dragGid);
+  // Save order to Firebase
+  const upd={};
+  ids.forEach((gid,i)=>{upd[`groups/${gid}/order`]=i;});
+  await update(ref(db),upd);
+  dragGid=null;dragGidCat=null;
+  toast('Orden guardado ✓');
 };
 
 window.addCategory=async function(){
