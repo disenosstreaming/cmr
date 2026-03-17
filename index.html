@@ -1013,6 +1013,7 @@ window.openDetail=function(id){detailId=id;window._detailId=id;renderPanel();doc
 window.closePanel=function(){document.getElementById('side-panel').classList.remove('open');detailId=null;};
 function renderPanel(){
   if(!detailId)return;const c=contacts[detailId];if(!c)return;
+  const isCrunchyContact=c.tipo==='crunchyroll';
   const emoji=SE[c.status]||'';
   document.getElementById('panel-avatar').textContent=ini(c.nombre);
   document.getElementById('panel-name').textContent=(c.nombre||'—')+(emoji?' '+emoji:'');
