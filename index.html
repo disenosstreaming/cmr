@@ -313,9 +313,16 @@ const GROUP_COLORS=['#1a6b47','#1a4f6b','#5b3dc8','#b45309','#c0392b','#9b3060',
 
 // Default groups baked in
 const DEFAULT_GROUPS={
-  'peru':{name:'Suscriptores Perú',color:'#1a6b47',statuses:['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata'],createdAt:0},
-  'extranjeros':{name:'Extranjeros',color:'#1a4f6b',statuses:['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata'],createdAt:1},
-  'crunchyroll':{name:'Crunchyroll 🍥',color:'#f47521',statuses:['En uso','Caída','Libre','Cortar perfiles','1 aviso','2 aviso'],createdAt:2,type:'crunchyroll'}
+  'peru':{name:'Suscriptores Perú',color:'#1a6b47',statuses:['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata'],createdAt:0,category:'suscriptores'},
+  'extranjeros':{name:'Extranjeros',color:'#1a4f6b',statuses:['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata'],createdAt:1,category:'suscriptores'},
+  'crunchyroll':{name:'Crunchyroll 🍥',color:'#f47521',statuses:['En uso','Caída','Libre','Cortar perfiles','1 aviso','2 aviso'],createdAt:2,type:'crunchyroll',category:'cuentas'}
+};
+
+const CATEGORIES={
+  'suscriptores':{name:'Suscriptores',icon:'👥',color:'#1a6b47'},
+  'cuentas':{name:'Cuentas',icon:'📺',color:'#f47521'},
+  'disenos':{name:'Diseños',icon:'🎨',color:'#9b59b6'},
+  'otro':{name:'Otro',icon:'📁',color:'#5a5852'}
 };
 
 let cu=null,contacts={},updates={},blacklist={},groups={};
@@ -430,20 +437,44 @@ function renderSidebar(){
   const ag=allGroups();
   const allContacts=Object.values(contacts);
   let html='';
+  
+  // Group by category
+  const catGroups={};
   Object.entries(ag).sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0)).forEach(([gid,g])=>{
-    const gc=allContacts.filter(c=>c.group===gid);
-    const agb=allGroups();const cgb=agb[gid];const isCGB=cgb&&cgb.type==='crunchyroll';
-    const venc=gc.filter(c=>isCGB?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length;
-    const pv=gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length;
-    const isActive=curGroup===gid&&curPage==='crm';
-    html+=`<div class="nav-item${isActive?' active':''}" onclick="goGroup('${gid}','activos')" style="margin:2px .75rem;border-radius:var(--r);padding:8px 10px;">
-      <div class="group-dot" style="background:${g.color||'#888'};width:9px;height:9px;border-radius:50%;flex-shrink:0"></div>
-      <span style="flex:1;font-size:13px">${g.name}</span>
-      ${venc?`<span class="nav-badge">${venc}</span>`:''}
-      ${pv&&!venc?`<span class="nav-badge amber">${pv}</span>`:''}
-      <button style="background:none;border:none;cursor:pointer;color:var(--text-hint);font-size:16px;padding:0 0 0 4px;line-height:1" onclick="event.stopPropagation();openGroupMenu('${gid}')">⋯</button>
-    </div>`;
+    const cat=g.category||'otro';
+    if(!catGroups[cat])catGroups[cat]=[];
+    catGroups[cat].push([gid,g]);
   });
+  
+  // Render each category
+  const catOrder=['suscriptores','cuentas','disenos','otro'];
+  catOrder.forEach(catId=>{
+    const grps=catGroups[catId];
+    if(!grps||grps.length===0)return;
+    const cat=CATEGORIES[catId]||{name:catId,icon:'📁',color:'#888'};
+    html+=`<div class="sidebar-section">
+      <div class="sidebar-label" style="display:flex;align-items:center;justify-content:space-between;padding:0 .5rem">
+        <span>${cat.icon} ${cat.name}</span>
+      </div>`;
+    grps.forEach(([gid,g])=>{
+      const gc=allContacts.filter(c=>c.group===gid);
+      const isCGB=g.type==='crunchyroll';
+      const venc=gc.filter(c=>isCGB?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length;
+      const pv=gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length;
+      const isActive=curGroup===gid&&curPage==='crm';
+      // Special handling for diseños groups
+      const isDisenoGroup=g.type==='diseno';
+      html+=`<div class="nav-item${isActive?' active':''}" onclick="${isDisenoGroup?`goDiseno('${gid}')`:`goGroup('${gid}','activos')`}" style="margin:2px .5rem;border-radius:var(--r);padding:7px 10px;">
+        <div style="background:${g.color||'#888'};width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
+        <span style="flex:1;font-size:13px;margin-left:6px">${g.name}</span>
+        ${venc&&!isDisenoGroup?`<span class="nav-badge">${venc}</span>`:''}
+        ${pv&&!venc&&!isDisenoGroup?`<span class="nav-badge amber">${pv}</span>`:''}
+        <button style="background:none;border:none;cursor:pointer;color:var(--text-hint);font-size:15px;padding:0 0 0 4px;line-height:1" onclick="event.stopPropagation();openGroupMenu('${gid}')">⋯</button>
+      </div>`;
+    });
+    html+='</div><div class="sidebar-divider"></div>';
+  });
+  
   document.getElementById('sidebar-groups').innerHTML=html;
   // Blacklist nav
   const blCount=Object.keys(blacklist).length;
@@ -458,13 +489,193 @@ window.goGroup=function(gid,tab){
   curGroup=gid;curTab=tab;fs='';page=1;sel.clear();curPage='crm';
   document.getElementById('crm-page').style.display='block';
   document.getElementById('blacklist-page').style.display='none';
+  document.getElementById('disenos-page').style.display='none';
   renderSidebar();renderAll();
+};
+
+// ── DISEÑOS ──
+let curDisenoGroup='';
+let disenoTasks=[];
+let editDisenoId=null;
+
+window.goDiseno=function(gid){
+  curDisenoGroup=gid;curPage='disenos';
+  const ag=allGroups();const g=ag[gid];
+  document.getElementById('disenos-title').textContent=g?g.name:'Diseños';
+  document.getElementById('disenos-dot').style.background=g?g.color:'#9b59b6';
+  document.getElementById('disenos-filter').innerHTML=`<option value="">Todos los estados</option>`
+    +(g&&g.statuses?g.statuses.map(s=>`<option value="${s}">${s}</option>`).join('')
+    :`<option value="Pendiente">⏳ Pendiente</option><option value="En proceso">⚙️ En proceso</option><option value="Fútbol">⚽ Fútbol</option><option value="Realizado">✅ Realizado</option><option value="Cancelado">❌ Cancelado</option>`);
+  document.getElementById('crm-page').style.display='none';
+  document.getElementById('blacklist-page').style.display='none';
+  document.getElementById('disenos-page').style.display='block';
+  renderSidebar();
+  renderDisenos();
+};
+
+function getDisenoStatusStyle(s){
+  const map={
+    'Pendiente':'background:#fef3e2;color:#b45309;border:1px solid #f59e0b',
+    'En proceso':'background:#e8f0f3;color:#1a4f6b;border:1px solid #4a90b8',
+    'Fútbol':'background:#e8f3ed;color:#1a6b47;border:1px solid #34b87d',
+    'Realizado':'background:#e8f3ed;color:#155a3c;border:1px solid #1a6b47',
+    'Cancelado':'background:#fdf0ee;color:#c0392b;border:1px solid #e85545'
+  };
+  return map[s]||'background:var(--bg);color:var(--text-muted);border:1px solid var(--border)';
+}
+
+window.renderDisenos=function(){
+  const filter=document.getElementById('disenos-filter')?.value||'';
+  const allDisenos=Object.entries(contacts)
+    .filter(([id,c])=>c.group===curDisenoGroup)
+    .map(([id,c])=>({...c,_id:id}));
+  
+  // Stats
+  const statCounts={};
+  allDisenos.forEach(d=>{statCounts[d.status]=(statCounts[d.status]||0)+1;});
+  document.getElementById('disenos-stats').innerHTML=Object.entries(statCounts)
+    .map(([s,n])=>`<div style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;${getDisenoStatusStyle(s)}" onclick="document.getElementById('disenos-filter').value='${s}';renderDisenos()">${s} <strong>${n}</strong></div>`)
+    .join('');
+
+  const filtered=filter?allDisenos.filter(d=>d.status===filter):allDisenos;
+  
+  if(!filtered.length){
+    document.getElementById('disenos-list').innerHTML='<div class="empty">No hay pedidos en esta sección</div>';
+    return;
+  }
+
+  // Sort: pending/in-process first, then realizado
+  const order={'Pendiente':0,'En proceso':1,'Fútbol':2,'Cancelado':3,'Realizado':4};
+  filtered.sort((a,b)=>(order[a.status]||9)-(order[b.status]||9));
+
+  document.getElementById('disenos-list').innerHTML=filtered.map(d=>{
+    const tasks=d.tasks?Object.values(d.tasks):[];
+    const doneTasks=tasks.filter(t=>t.done).length;
+    const taskBar=tasks.length?`<div style="margin-top:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;color:var(--text-muted)">Tareas ${doneTasks}/${tasks.length}</span>
+      </div>
+      <div style="background:var(--border);border-radius:20px;height:4px;overflow:hidden">
+        <div style="background:var(--accent);height:100%;width:${tasks.length?Math.round(doneTasks/tasks.length*100):0}%;transition:width .3s"></div>
+      </div>
+      <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+        ${tasks.map((t,i)=>`<label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+          <input type="checkbox" ${t.done?'checked':''} onchange="toggleDisenoTask('${d._id}','${Object.keys(d.tasks)[i]}',this.checked)" style="accent-color:var(--accent)">
+          <span style="${t.done?'text-decoration:line-through;color:var(--text-hint)':''}">${t.text}</span>
+        </label>`).join('')}
+      </div>
+    </div>`:'';
+    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:10px;transition:border-color .15s" onmouseenter="this.style.borderColor='var(--border-strong)'" onmouseleave="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:14px;font-weight:500">${d.nombre||'Sin descripción'}</span>
+            <span style="font-size:11px;padding:2px 10px;border-radius:20px;font-weight:500;${getDisenoStatusStyle(d.status)}">${d.status||'Pendiente'}</span>
+          </div>
+          ${d.cliente?`<div style="font-size:12px;color:var(--text-muted)">👤 ${d.cliente}${d.celular?` · <a href="tel:${d.celular}" style="color:var(--info)">${d.celular}</a>`:''}</div>`:''}
+          ${d.notas?`<div style="font-size:12px;color:var(--text-muted);margin-top:4px;white-space:pre-wrap">${d.notas}</div>`:''}
+          ${taskBar}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn amber" onclick="openEditDiseno('${d._id}')" style="font-size:12px;padding:4px 10px">Editar</button>
+          <select onchange="changeDisenoStatus('${d._id}',this.value)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:inherit;color:var(--text);cursor:pointer;outline:none;">
+            ${(allGroups()[curDisenoGroup]?.statuses||['Pendiente','En proceso','Fútbol','Realizado','Cancelado']).map(s=>`<option${d.status===s?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+window.addDisenoTask=function(){
+  const inp=document.getElementById('d-task-input');
+  const text=inp.value.trim();if(!text)return;
+  disenoTasks.push({text,done:false});
+  inp.value='';
+  renderDisenoTasksInModal();
+};
+
+function renderDisenoTasksInModal(){
+  document.getElementById('d-tasks-list').innerHTML=disenoTasks.map((t,i)=>`
+    <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <input type="checkbox" ${t.done?'checked':''} onchange="disenoTasks[${i}].done=this.checked" style="accent-color:var(--accent)">
+      <span style="flex:1;font-size:13px;${t.done?'text-decoration:line-through;color:var(--text-hint)':''}">${t.text}</span>
+      <button onclick="disenoTasks.splice(${i},1);renderDisenoTasksInModal()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;padding:0">×</button>
+    </div>`).join('');
+}
+
+window.openAddDiseno=function(){
+  editDisenoId=null;
+  disenoTasks=[];
+  document.getElementById('d-desc').value='';
+  document.getElementById('d-cliente').value='';
+  document.getElementById('d-celular').value='';
+  document.getElementById('d-notas').value='';
+  document.getElementById('d-status').value='Pendiente';
+  document.getElementById('diseno-modal-title').textContent='🎨 Nuevo pedido';
+  renderDisenoTasksInModal();
+  document.getElementById('diseno-modal').style.display='flex';
+};
+
+window.openEditDiseno=function(id){
+  editDisenoId=id;
+  const d=contacts[id];if(!d)return;
+  disenoTasks=d.tasks?Object.entries(d.tasks).map(([k,v])=>({...v,_key:k})):[];
+  document.getElementById('d-desc').value=d.nombre||'';
+  document.getElementById('d-cliente').value=d.cliente||'';
+  document.getElementById('d-celular').value=d.celular||d.telefono||'';
+  document.getElementById('d-notas').value=d.notas||'';
+  document.getElementById('d-status').value=d.status||'Pendiente';
+  document.getElementById('diseno-modal-title').textContent='✏️ Editar pedido';
+  renderDisenoTasksInModal();
+  document.getElementById('diseno-modal').style.display='flex';
+};
+
+window.closeAddDiseno=function(){document.getElementById('diseno-modal').style.display='none';};
+
+window.saveDiseno=async function(){
+  const desc=document.getElementById('d-desc').value.trim();
+  if(!desc){toast('La descripción es obligatoria');return;}
+  const tasksObj={};
+  disenoTasks.forEach((t,i)=>{tasksObj['task_'+i]={text:t.text,done:t.done};});
+  const data={
+    nombre:desc,
+    cliente:document.getElementById('d-cliente').value.trim(),
+    celular:document.getElementById('d-celular').value.trim(),
+    telefono:document.getElementById('d-celular').value.trim(),
+    notas:document.getElementById('d-notas').value.trim(),
+    status:document.getElementById('d-status').value,
+    tasks:tasksObj,
+    group:curDisenoGroup,
+    tipo:'diseno',
+    updatedAt:new Date().toISOString(),
+    updatedBy:cu.email
+  };
+  if(editDisenoId){
+    await update(ref(db,`contacts/${editDisenoId}`),data);
+    toast('Pedido actualizado ✓');
+  }else{
+    data.createdAt=new Date().toISOString();data.createdBy=cu.email;
+    await push(ref(db,'contacts'),data);
+    toast('Pedido agregado ✓');
+  }
+  closeAddDiseno();
+};
+
+window.changeDisenoStatus=async function(id,status){
+  await update(ref(db,`contacts/${id}`),{status,updatedAt:new Date().toISOString()});
+  toast('Estado: '+status);
+};
+
+window.toggleDisenoTask=async function(id,taskKey,done){
+  await update(ref(db,`contacts/${id}/tasks/${taskKey}`),{done});
 };
 
 window.navTo=function(p){
   curPage=p;
   document.getElementById('crm-page').style.display=p==='crm'?'block':'none';
   document.getElementById('blacklist-page').style.display=p==='blacklist'?'block':'none';
+  document.getElementById('disenos-page').style.display=p==='disenos'?'block':'none';
   if(p==='blacklist')renderBL();
   renderSidebar();
 };
@@ -528,10 +739,14 @@ window.saveNewGroup=async function(){
   if(!name){toast('El nombre es obligatorio');return;}
   if(newGroupStatuses.size===0){toast('Selecciona al menos un estado');return;}
   const gid='g_'+Date.now();
+  const ngCat=document.getElementById('ng-category')?.value||'otro';
+  const isDiseno=ngCat==='disenos';
   await set(ref(db,`groups/${gid}`),{
     name,color:newGroupColor,
-    statuses:[...newGroupStatuses],
-    createdAt:Date.now(),createdBy:cu.email
+    statuses:isDiseno?['Pendiente','En proceso','Realizado','Fútbol','Cancelado']:[...newGroupStatuses],
+    createdAt:Date.now(),createdBy:cu.email,
+    category:ngCat,
+    type:isDiseno?'diseno':undefined
   });
   closeNewGroup();toast(`Grupo "${name}" creado ✓`);
   goGroup(gid,'activos');
@@ -1475,6 +1690,32 @@ if(saved){
         </div>
       </div>
 
+      <!-- DISEÑOS PAGE -->
+      <div id="disenos-page" class="main" style="display:none">
+        <div id="disenos-sticky" style="position:sticky;top:50px;z-index:15;background:var(--bg);padding-bottom:4px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+          <div style="display:flex;align-items:center;gap:10px;padding-top:1.25rem;margin-bottom:1rem;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;flex:1">
+              <div id="disenos-dot" style="width:10px;height:10px;border-radius:50%;background:#9b59b6;flex-shrink:0"></div>
+              <h2 id="disenos-title" style="font-size:18px;font-weight:500">Diseños</h2>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn green" onclick="openAddDiseno()" style="background:#9b59b6;border-color:#9b59b6">+ Agregar pedido</button>
+              <select id="disenos-filter" onchange="renderDisenos()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:13px;color:var(--text);outline:none;cursor:pointer;">
+                <option value="">Todos los estados</option>
+                <option value="Pendiente">⏳ Pendiente</option>
+                <option value="En proceso">⚙️ En proceso</option>
+                <option value="Fútbol">⚽ Fútbol</option>
+                <option value="Realizado">✅ Realizado</option>
+                <option value="Cancelado">❌ Cancelado</option>
+              </select>
+            </div>
+          </div>
+          <!-- Stats row -->
+          <div id="disenos-stats" style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap"></div>
+        </div>
+        <div id="disenos-list"></div>
+      </div>
+
       <!-- BLACKLIST PAGE -->
       <div id="blacklist-page" class="main" style="display:none">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
@@ -1587,12 +1828,21 @@ if(saved){
 <div class="overlay" id="new-group-modal" style="display:none" onclick="if(event.target===this)closeNewGroup()">
   <div class="modal" style="max-width:500px"><h2>Crear nuevo grupo</h2>
     <div class="form-grid">
-      <div class="form-group full"><label>Nombre del grupo *</label><input id="ng-name" placeholder="Ej: Venezuela, Colombia..."></div>
+      <div class="form-group full"><label>Nombre del grupo *</label><input id="ng-name" placeholder="Ej: Venezuela, Disney+..."></div>
+      <div class="form-group full">
+        <label>Categoría</label>
+        <select id="ng-category" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;">
+          <option value="suscriptores">👥 Suscriptores</option>
+          <option value="cuentas">📺 Cuentas</option>
+          <option value="disenos">🎨 Diseños</option>
+          <option value="otro">📁 Otro</option>
+        </select>
+      </div>
       <div class="form-group full">
         <label>Color del grupo</label>
         <div class="color-picks" id="ng-colors"></div>
       </div>
-      <div class="form-group full">
+      <div class="form-group full" id="ng-statuses-section">
         <label>Estados disponibles en este grupo</label>
         <div class="status-checks" id="ng-statuses"></div>
       </div>
@@ -1628,6 +1878,37 @@ if(saved){
       <button class="btn red" id="grp-menu-del" onclick="deleteGroupFromMenu()">🗑 Eliminar grupo</button>
     </div>
     <div class="modal-footer"><button class="btn ghost" onclick="closeGroupMenu()">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- DISEÑO MODAL -->
+<div class="overlay" id="diseno-modal" style="display:none" onclick="if(event.target===this)closeAddDiseno()">
+  <div class="modal" style="max-width:480px">
+    <h2 id="diseno-modal-title">🎨 Nuevo pedido</h2>
+    <div class="form-grid">
+      <div class="form-group full"><label>Descripción del diseño *</label><input id="d-desc" placeholder="Ej: Logo para equipo Estrellas FC..."></div>
+      <div class="form-group"><label>Cliente</label><input id="d-cliente" placeholder="Nombre del cliente"></div>
+      <div class="form-group"><label>Celular</label><input id="d-celular" placeholder="+51 999..."></div>
+      <div class="form-group full"><label>Estado</label>
+        <select id="d-status" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;">
+          <option>Pendiente</option><option>En proceso</option><option>Fútbol</option><option>Realizado</option><option>Cancelado</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Notas / Descripción detallada</label><textarea id="d-notas" style="min-height:80px"></textarea></div>
+    </div>
+    <!-- Tareas -->
+    <div style="margin-top:1rem">
+      <div style="font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Tareas</div>
+      <div id="d-tasks-list"></div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <input id="d-task-input" placeholder="Agregar tarea..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;" onkeydown="if(event.key==='Enter'){addDisenoTask();event.preventDefault();}">
+        <button class="btn" onclick="addDisenoTask()">+ Agregar</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeAddDiseno()">Cancelar</button>
+      <button class="btn green" style="background:#9b59b6;border-color:#9b59b6" onclick="saveDiseno()">Guardar</button>
+    </div>
   </div>
 </div>
 
