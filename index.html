@@ -618,7 +618,7 @@ function renderTable(){
       <td><input type="checkbox" class="cb" ${isSel?'checked':''} onchange="toggleSel('${c._id}',this.checked)"></td>
       <td><div class="name-cell">
         <div class="avatar">${ini(c.nombre)}</div>
-        <span class="name-text open-detail" data-id="${c._id}"${c.nombre||'—'}</span>
+        <span class="name-text open-detail" data-id="${c._id}">${c.nombre||'—'}</span>
         ${emoji?`<span style="font-size:13px;margin-left:2px">${emoji}</span>`:''}
         ${prevBadge}
         ${hasUp?`<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-left:4px"></span>`:''}
