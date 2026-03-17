@@ -944,9 +944,10 @@ function renderTable(){
     const hist=c.statusHistory?Object.values(c.statusHistory):[];
     const wasRata=hist.some(h=>h.from==='Rata')||c.tipo==='Rata';
     const wasVIP=hist.some(h=>h.from==='VIP')||c.tipo==='VIP';
-    const isNoEsperar=c._noEsperar||c.status==='No esperar'||c.tipo==='No esperar';
-    const prevBadge=isNoEsperar?`<span title="¡No esperar! Siempre promete y no paga" style="display:inline-flex;align-items:center;gap:2px;font-size:10px;background:#fff0e0;color:#c0390b;padding:1px 6px;border-radius:20px;margin-left:3px;border:1px solid #e07030"><span class="scissors-anim">✂️</span> no esperar</span>`
-      :wasRata?`<span class="fue-rata-badge" title="¡Ojo! Este contacto fue Rata anteriormente"><span class="rat-emoji">🐀</span> fue rata</span>`
+    const isNoEsperar=c.status==='No esperar';
+    const isNoEsperarVenc=isNoEsperar&&du(c.vencimiento)!==null&&du(c.vencimiento)<=0;
+    const noEsperarBadge=isNoEsperarVenc?`<span class="no-esperar-badge" title="¡No esperar! Ya venció"><span class="sc-emoji">✂️</span> NO ESPERAR</span>`:'';
+    const prevBadge=wasRata?`<span class="fue-rata-badge" title="¡Ojo! Este contacto fue Rata anteriormente"><span class="rat-emoji">🐀</span> fue rata</span>`
       :wasVIP?`<span class="fue-vip-badge" title="Fue VIP anteriormente">👑 fue VIP</span>`:'';
     const allPhones=getPhones(c);
   const isCrunchyContact=c.tipo==='crunchyroll';
@@ -967,7 +968,7 @@ function renderTable(){
       <td><span class="pill ${SC[c.status]||''}" onclick="openMove('${c._id}')">${SE[c.status]||''} ${c.status||'—'}</span></td>
       <td><div class="actions">
         ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=1))||(c.status==='Vencido'&&c.status!=='Aviso enviado')||(c.status==='Activado'&&du(c.vencimiento)<0)?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
-        ${c.status==='Aviso enviado'?`<span style="font-size:11px;color:var(--accent)">✓ Avisado</span>`:''}
+        ${c.status==='Aviso enviado'?`<button class="btn" onclick="undoAviso('${c._id}')" style="font-size:11px;padding:3px 8px;color:var(--warn);border-color:var(--warn)">↩ Deshacer</button>`:''}
         <button class="btn amber" onclick="openEdit('${c._id}')">Editar</button>
         <button class="btn red" onclick="delContact('${c._id}')">×</button>
       </div></td>
@@ -1082,7 +1083,7 @@ function renderCrunchyTable(){
       <td><span class="pill ${sc}" onclick="openMove('${c._id}')">${c.status||'—'}</span></td>
       <td><div class="actions">
         ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=1))||(c.status==='Vencido'&&c.status!=='Aviso enviado')||(c.status==='Activado'&&du(c.vencimiento)<0)?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
-        ${c.status==='Aviso enviado'?`<span style="font-size:11px;color:var(--accent)">✓ Avisado</span>`:''}
+        ${c.status==='Aviso enviado'?`<button class="btn" onclick="undoAviso('${c._id}')" style="font-size:11px;padding:3px 8px;color:var(--warn);border-color:var(--warn)">↩ Deshacer</button>`:''}
         <button class="btn amber" onclick="openEdit('${c._id}')">Editar</button>
         <button class="btn red" onclick="delContact('${c._id}')">×</button>
       </div></td>
@@ -1548,19 +1549,7 @@ window.undoAviso=async function(id){
   });
   toast(`↩ Aviso deshecho — vuelve a ${prevStatus}`);
 };
-window.undoAviso=async function(id){
-  const c=contacts[id];if(!c)return;
-  // Find previous status from history
-  const hist=c.statusHistory?Object.values(c.statusHistory).sort((a,b)=>b.at>a.at?1:-1):[];
-  const prev=hist.find(h=>h.to==='Aviso enviado');
-  const backTo=prev?.from||'Activado';
-  const now=new Date().toISOString();
-  await update(ref(db,`contacts/${id}`),{
-    status:backTo,
-    [`statusHistory/${Date.now()}_undo`]:{from:'Aviso enviado',to:backTo,at:now,by:cu.email}
-  });
-  toast('↩ Aviso deshecho — volvió a '+backTo);
-};
+
 window.sendAviso=async function(id){
   const c=contacts[id];if(!c)return;
   const now=new Date().toISOString();
@@ -1646,8 +1635,8 @@ function renderPanel(){
       </div>
     </div>
     <div class="panel-row"><span class="panel-label">Estado</span><span class="pill ${SC[c.status]||''}" onclick="openMove('${detailId}')">${SE[c.status]||''} ${c.status||'—'}</span></div>
-    \${(c._noEsperar||c.status==='No esperar')?`<div style="background:#fff0e0;border:1px solid #e07030;border-radius:var(--r);padding:8px 12px;margin-bottom:8px;font-size:13px;color:#c0390b;display:flex;align-items:center;gap:8px"><span class="scissors-anim" style="font-size:18px">✂️</span><span><strong>No esperar</strong> — Este cliente siempre promete pagar pero no cumple. No dar más tiempo.</span></div>`:''}
-    \${g?`<div class="panel-row"><span class="panel-label">Grupo</span><span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block"></span>${g.name}</span></div>`:''}
+    ${(c._noEsperar||c.status==='No esperar')?`<div style="background:#fff0e0;border:1px solid #e07030;border-radius:var(--r);padding:8px 12px;margin-bottom:8px;font-size:13px;color:#c0390b;display:flex;align-items:center;gap:8px"><span class="scissors-anim" style="font-size:18px">✂️</span><span><strong>No esperar</strong> — Este cliente siempre promete pagar pero no cumple. No dar más tiempo.</span></div>`:''}
+    ${g?`<div class="panel-row"><span class="panel-label">Grupo</span><span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block"></span>${g.name}</span></div>`:''}
     ${c.tipo?`<div class="panel-row"><span class="panel-label">Tipo</span><span class="pill ${SC[c.tipo]||''}" style="cursor:default">${SE[c.tipo]||''} ${c.tipo}</span></div>`:''}
     ${c.notas?`<div class="panel-row" style="align-items:flex-start"><span class="panel-label">Notas</span><span style="font-size:13px;color:var(--text-muted);text-align:right;max-width:220px;white-space:normal">${c.notas}</span></div>`:''}
     <div class="section-title">Historial de estados</div>
