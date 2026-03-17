@@ -119,7 +119,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .alert-banner{background:var(--warn-light);border:1px solid var(--warn);border-radius:var(--r);padding:9px 14px;margin-bottom:1rem;display:none;align-items:center;gap:8px;font-size:13px;color:var(--warn);}
 .alert-banner a{color:var(--warn);font-weight:500;cursor:pointer;text-decoration:underline;}
 /* STATS */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem;}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.25rem;}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;cursor:pointer;transition:all .15s;user-select:none;}
 .stat:hover{border-color:var(--border-strong);transform:translateY(-1px);}
 .stat.af{border-color:var(--accent);background:var(--accent-light);}
@@ -157,6 +157,7 @@ tbody tr:last-child td{border-bottom:none;}
 .p-sospechoso{background:#fde8ef;color:#9b3060;}
 .p-pendiente{background:var(--info-light);color:var(--info);}
 .p-rata{background:var(--danger-light);color:#7a1a0a;}
+.p-aviso{background:#e8f3ed;color:#1a5c38;border:1px solid #1a6b47;}
 .tel-link{color:var(--info);font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;}
 .tel-link:hover{text-decoration:underline;}
 .date-warn{color:var(--warn);font-weight:500;}
@@ -232,6 +233,7 @@ tbody tr.row-vip td{background:rgba(91,61,200,.04);}
 .status-opt{padding:8px;border-radius:var(--r);border:1px solid var(--border);cursor:pointer;font-size:13px;text-align:center;transition:all .15s;}
 .status-opt:hover{background:var(--bg);}
 .status-opt.selected{border-color:var(--accent);background:var(--accent-light);color:var(--accent);font-weight:500;}
+.status-opt[data-s="Aviso enviado"].selected,.status-opt[data-s="Aviso enviado"]:hover{border-color:#1a6b47;background:#e8f3ed;color:#1a5c38;}
 /* BLACKLIST */
 .bl-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;}
 .bl-tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);margin:2px;}
@@ -263,10 +265,10 @@ const fbApp=initializeApp(FC);
 const auth=getAuth(fbApp);
 const db=getDatabase(fbApp);
 
-const ALL_STATUSES=['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata'];
+const ALL_STATUSES=['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata','Aviso enviado'];
 const CRUNCHY_STATUSES=['En uso','Caída','Libre','Cortar perfiles','1 aviso','2 aviso'];
 const CRUNCHY_SC={'En uso':'p-activado','Caída':'p-vencido','Libre':'p-pendiente','Cortar perfiles':'p-cortado','1 aviso':'p-cobrar','2 aviso':'p-rata'};
-const SC={Activado:'p-activado',Cobrar:'p-cobrar',Vencido:'p-vencido',Cortado:'p-cortado',VIP:'p-vip',Sospechoso:'p-sospechoso',Pendiente:'p-pendiente',Rata:'p-rata'};
+const SC={Activado:'p-activado',Cobrar:'p-cobrar',Vencido:'p-vencido',Cortado:'p-cortado',VIP:'p-vip',Sospechoso:'p-sospechoso',Pendiente:'p-pendiente',Rata:'p-rata','Aviso enviado':'p-aviso'};
 const SE={Sospechoso:'🕵️',Rata:'🐀',VIP:'👑'};
 const GROUP_COLORS=['#1a6b47','#1a4f6b','#5b3dc8','#b45309','#c0392b','#9b3060','#2d6b5a','#6b4a1a'];
 
@@ -530,12 +532,15 @@ function renderAll(){
     activos:gc.filter(c=>isCG?c.status==='En uso':c.status==='Activado').length,
     vencidos:gc.filter(c=>isCG?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length,
     porvencer:gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length,
-    cortados:gc.filter(c=>isCG?c.status==='Cortar perfiles':c.status==='Cortado').length
+    cortados:gc.filter(c=>isCG?c.status==='Cortar perfiles':c.status==='Cortado').length,
+    avisados:gc.filter(c=>c.status==='Aviso enviado').length
   };
   document.getElementById('s-activos').textContent=st.activos;
   document.getElementById('s-vencidos').textContent=st.vencidos;
   document.getElementById('s-porvencer').textContent=st.porvencer;
   document.getElementById('s-cortados').textContent=st.cortados;
+  const aviEl=document.getElementById('s-avisados');
+  if(aviEl)aviEl.textContent=st.avisados||0;
   const ag=allGroups();const g=ag[curGroup];
   document.getElementById('page-title').textContent=g?g.name:'Suscriptores';
   document.getElementById('page-dot').style.background=g?g.color:'var(--accent)';
@@ -628,6 +633,8 @@ function renderTable(){
       <td style="color:var(--text-muted);font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis">${getTelegrams(c)[0]||'—'}</td>
       <td><span class="pill ${SC[c.status]||''}" onclick="openMove('${c._id}')">${SE[c.status]||''} ${c.status||'—'}</span></td>
       <td><div class="actions">
+        ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=3))?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
+        ${c.status==='Aviso enviado'?`<span style="font-size:11px;color:var(--accent)">✓ Avisado</span>`:''}
         <button class="btn amber" onclick="openEdit('${c._id}')">Editar</button>
         <button class="btn red" onclick="delContact('${c._id}')">×</button>
       </div></td>
@@ -741,6 +748,8 @@ function renderCrunchyTable(){
       <td class="${dc(c.vencimiento)}">${fd(c.vencimiento)}<span style="font-size:11px">${ds(c.vencimiento)}</span></td>
       <td><span class="pill ${sc}" onclick="openMove('${c._id}')">${c.status||'—'}</span></td>
       <td><div class="actions">
+        ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=3))?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
+        ${c.status==='Aviso enviado'?`<span style="font-size:11px;color:var(--accent)">✓ Avisado</span>`:''}
         <button class="btn amber" onclick="openEdit('${c._id}')">Editar</button>
         <button class="btn red" onclick="delContact('${c._id}')">×</button>
       </div></td>
@@ -850,7 +859,14 @@ window.saveRenewal=async function(id){
 };
 
 // TABS
-window.switchTab=function(t){curTab=t;fs='';page=1;sel.clear();renderAll();renderBulkBar();};
+window.switchTab=function(t){
+  curTab=t;fs='';page=1;sel.clear();
+  // Highlight active stat card
+  document.querySelectorAll('.stat').forEach(el=>{
+    el.classList.toggle('af', el.dataset.filter===t);
+  });
+  renderAll();renderBulkBar();
+};
 window.doSort=function(f){if(sf===f)sd*=-1;else{sf=f;sd=1;}renderTable();};
 window.doSearch=function(v){search=v;page=1;renderTable();};
 window.doFilter=function(v){fs=v;page=1;renderTable();};
@@ -983,6 +999,16 @@ window.saveEdit=async function(){
 };
 
 // DELETE
+window.sendAviso=async function(id){
+  const c=contacts[id];if(!c)return;
+  await update(ref(db,`contacts/${id}`),{
+    status:'Aviso enviado',
+    avisoAt:new Date().toISOString(),
+    avisoBy:cu.email,
+    statusHistory:{...(c.statusHistory||{}), [Date.now()+'_aviso']:{from:c.status,to:'Aviso enviado',at:new Date().toISOString(),by:cu.email}}
+  });
+  toast('📢 Aviso registrado — '+c.nombre);
+};
 window.delContact=async function(id){
   if(!confirm('¿Eliminar?'))return;
   await remove(ref(db,`contacts/${id}`));
@@ -1155,10 +1181,11 @@ if(saved){document.documentElement.setAttribute('data-theme',saved);document.get
         </div>
         <div class="alert-banner" id="alert-banner"></div>
         <div class="stats">
-          <div class="stat af" data-filter="activos" onclick="switchTab('activos')"><div class="stat-label">Activos</div><div class="stat-val c-green" id="s-activos">0</div></div>
-          <div class="stat" data-filter="vencidos" onclick="switchTab('vencidos')"><div class="stat-label">Vencidos</div><div class="stat-val c-red" id="s-vencidos">0</div></div>
-          <div class="stat" data-filter="porvencer" onclick="switchTab('porvencer')"><div class="stat-label">Vencen hoy/mañana</div><div class="stat-val c-amber" id="s-porvencer">0</div></div>
-          <div class="stat" data-filter="cortados" onclick="switchTab('cortados')"><div class="stat-label">Cortados ✂️</div><div class="stat-val c-gray" id="s-cortados">0</div></div>
+          <div class="stat af" data-filter="activos" onclick="switchTab('activos')"><div class="stat-label">✅ Activos</div><div class="stat-val c-green" id="s-activos">0</div></div>
+          <div class="stat" data-filter="vencidos" onclick="switchTab('vencidos')"><div class="stat-label">⏰ Vencidos</div><div class="stat-val c-red" id="s-vencidos">0</div></div>
+          <div class="stat" data-filter="porvencer" onclick="switchTab('porvencer')"><div class="stat-label">⚡ Hoy/mañana</div><div class="stat-val c-amber" id="s-porvencer">0</div></div>
+          <div class="stat" data-filter="cortados" onclick="switchTab('cortados')"><div class="stat-label">✂️ Cortados</div><div class="stat-val c-gray" id="s-cortados">0</div></div>
+          <div class="stat" data-filter="avisados" onclick="doFilter('Aviso enviado')" style="border-left:3px solid var(--accent)"><div class="stat-label">📢 Avisados</div><div class="stat-val c-green" id="s-avisados">0</div></div>
         </div>
         <div class="tabs" id="tab-bar"></div>
         <div class="bulk-bar" id="bulk-bar">
