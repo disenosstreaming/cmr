@@ -945,6 +945,15 @@ window.importExcel=async function(event){
       const colTg=getCol(['telegram','usuario de telegram']);
       const colVenc=getCol(['vencimiento','venc','fecha']);
       const colTipo=getCol(['tipo','type']);
+      const colStatus=getCol(['estado','status','tipo de estado']);
+      const statusMap={
+        'activado':'Activado','active':'Activado','activo':'Activado','en uso':'En uso',
+        'cobrar':'Cobrar','vencido':'Vencido','vencida':'Vencido',
+        'cortado':'Cortado','cortada':'Cortado','cortar':'Cortado','cortar perfiles':'Cortar perfiles',
+        'vip':'VIP','sospechoso':'Sospechoso','sospechosa':'Sospechoso',
+        'pendiente':'Pendiente','rata':'Rata','caida':'Caída','caído':'Caída',
+        'libre':'Libre','aviso enviado':'Aviso enviado','1 aviso':'1 aviso','2 aviso':'2 aviso'
+      };
       
       const dataRows=rows.slice(headerIdx+1);
       let imported=0,skipped=0;
