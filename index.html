@@ -1019,39 +1019,37 @@ window.showImportConfirm=function(ops,blHits,total){
     <div style="font-size:13px;margin-bottom:1rem">¿Deseas continuar con la importación?</div>
     <div class="modal-footer">
       <button class="btn" onclick="document.getElementById('import-confirm').remove()">Cancelar</button>
-      <button class="btn green" onclick="doImport(window._importOps)">✓ Importar ${total} contactos</button>
+      <button class="btn" onclick="doImport(window._importOps,true)" style="border-color:var(--accent);color:var(--accent)">✓ Importar (omitir duplicados)</button>
+      <button class="btn green" onclick="doImport(window._importOps,false)">✓ Importar todos</button>
     </div>
   </div>`;
   window._importOps=ops;
   document.body.appendChild(modal);
 };
 
-window.doImport=async function(ops){
+window.doImport=async function(ops,skipDupes){
   document.getElementById('import-confirm')?.remove();
   toast('⏳ Importando...');
-  
-  // Build set of existing phones and telegrams in current group
   const existingPhones=new Set();
   const existingTgs=new Set();
-  Object.values(contacts).filter(c=>c.group===curGroup).forEach(c=>{
-    getPhones(c).forEach(p=>p&&existingPhones.add(p.replace(/\s+/g,'').toLowerCase()));
-    getTelegrams(c).forEach(t=>t&&existingTgs.add(t.toLowerCase().trim()));
+  Object.values(contacts).forEach(c=>{
+    getPhones(c).forEach(p=>p&&existingPhones.add(norm(p)));
+    getTelegrams(c).forEach(t=>t&&t.length>2&&existingTgs.add(norm(t)));
   });
-  
-  let done=0,skipped=0;
+  let done=0,dupes=0;
   const batch=[];
-  ops.forEach(op=>{
+  for(const op of ops){
     const {_blMatches,...data}=op;
-    // Check if phone or telegram already exists
-    const phones=[data.telefono,data.telefono2].filter(Boolean).map(p=>p.replace(/\s+/g,'').toLowerCase());
-    const tgs=[data.telegram].filter(Boolean).map(t=>t.toLowerCase().trim());
-    const isDupe=phones.some(p=>existingPhones.has(p))||tgs.some(t=>t.length>2&&existingTgs.has(t));
-    if(isDupe){skipped++;return;}
+    if(skipDupes){
+      const phones=[data.telefono,data.telefono2].filter(Boolean);
+      const tgs=[data.telegram].filter(Boolean);
+      const isDupe=phones.some(p=>existingPhones.has(norm(p)))||tgs.some(t=>t.length>2&&existingTgs.has(norm(t)));
+      if(isDupe){dupes++;continue;}
+    }
     batch.push(push(ref(db,'contacts'),data).then(()=>done++));
-  });
-  
+  }
   await Promise.all(batch);
-  toast(`✅ ${done} importados${skipped>0?` · ${skipped} duplicados omitidos`:''}`);
+  toast(`✅ ${done} importados${dupes>0?' · '+dupes+' duplicados omitidos':''}`);
 };
 
 window.bulkAviso=async function(){
@@ -1419,14 +1417,13 @@ if(saved){
           <input type="text" placeholder="Buscar nombre, teléfono, telegram..." oninput="doSearch(this.value)">
           <select id="fsel" onchange="doFilter(this.value)"><option value="">Todos los estados</option></select>
         </div>
-        </div><!-- /sticky-header -->
         <div class="bulk-bar" id="bulk-bar">
           <span id="bulk-count"></span>
           <button class="btn" style="border-color:#1a6b47;color:#1a5c38;font-weight:500" onclick="bulkAviso()">📢 Aviso a seleccionados</button>
           <button class="btn green" onclick="openBulkMove()">Cambiar estado</button>
-          <button class="btn red" onclick="bulkDelete()">Eliminar</button>
-          <button class="btn ghost" onclick="clearSel()">Cancelar</button>
+          <button class="btn ghost" onclick="clearSel()">Cancelar selección</button>
         </div>
+        </div><!-- /sticky-header -->
         <div class="table-wrap">
           <table>
             <thead><tr id="thead-row">
