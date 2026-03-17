@@ -17,6 +17,43 @@
   --gray:#5a5852;--gray-light:#f0efea;
   --r:8px;--rl:12px;
 }
+[data-theme="pink"]{
+  --bg:#fff0f5;--surface:#fff5f8;--border:#f5c6d8;--border-strong:#e8a0bc;
+  --text:#4a1a2c;--text-muted:#a0607a;--text-hint:#d4a0b5;
+  --accent:#d63384;--accent-light:#ffe0ec;--accent-hover:#b02070;
+  --danger:#c0392b;--danger-light:#fdf0ee;
+  --warn:#b45309;--warn-light:#fef3e2;
+  --info:#6a4c8c;--info-light:#ede0f5;
+  --purple:#9b59b6;--purple-light:#f5e6fa;
+  --gray:#8a6070;--gray-light:#f5e8ee;
+  --r:8px;--rl:12px;
+}
+[data-theme="pink"] .topbar{background:#ffe0ec;border-color:#f5c6d8;}
+[data-theme="pink"] .sidebar{background:#ffe0ec;border-color:#f5c6d8;}
+[data-theme="pink"] .stat{background:#fff5f8;border-color:#f5c6d8;}
+[data-theme="pink"] .stat.af{background:#ffe0ec;border-color:#d63384;}
+[data-theme="pink"] .table-wrap{background:#fff5f8;}
+[data-theme="pink"] thead th{background:#fff0f5;}
+[data-theme="pink"] .modal{background:#fff5f8;}
+[data-theme="pink"] .side-panel{background:#fff5f8;border-color:#f5c6d8;}
+[data-theme="pink"] .update-item{background:#fff0f5;}
+[data-theme="pink"] .nav-item.active{background:#ffe0ec;color:#d63384;}
+[data-theme="pink"] .nav-item:hover{background:#ffe8f0;}
+[data-theme="pink"] .btn.green{background:#d63384;border-color:#d63384;}
+[data-theme="pink"] .btn.green:hover{background:#b02070;}
+[data-theme="pink"] .p-activado{background:#ffe0ec;color:#d63384;}
+[data-theme="pink"] .bulk-bar{background:#ffe0ec;border-color:#d63384;color:#d63384;}
+[data-theme="pink"] .tabs .tab.active{color:#d63384;border-bottom-color:#d63384;}
+[data-theme="pink"] .sync-dot{background:#d63384;}
+[data-theme="pink"] .topbar-logo span{color:#d63384;}
+[data-theme="pink"] .auth-logo span{color:#d63384;}
+[data-theme="pink"] .btn-login{background:#d63384;}
+[data-theme="pink"] .btn-login:hover{background:#b02070;}
+[data-theme="pink"] .pagination{background:#fff0f5;}
+[data-theme="pink"] .renewal-box{background:#fff0f5;}
+[data-theme="pink"] .group-dot{box-shadow:0 0 4px #d63384;}
+[data-theme="pink"] .name-text:hover{color:#d63384;}
+[data-theme="pink"] .fue-rata-badge{background:#ffe0ec;}
 [data-theme="dark"]{
   --bg:#0f0f0d;--surface:#1a1917;--border:#2a2825;--border-strong:#3a3835;
   --text:#eceae5;--text-muted:#9a9890;--text-hint:#5a5852;
@@ -1164,13 +1201,20 @@ window.delBL=async function(id){if(!confirm('¿Eliminar de la lista negra?'))ret
 
 // THEME
 window.toggleTheme=function(){
-  const html=document.documentElement;const dark=html.getAttribute('data-theme')==='dark';
-  html.setAttribute('data-theme',dark?'light':'dark');
-  document.getElementById('theme-icon').textContent=dark?'🌙':'☀️';
-  localStorage.setItem('crm-theme',dark?'light':'dark');
+  const html=document.documentElement;
+  const cur=html.getAttribute('data-theme')||'light';
+  const next=cur==='light'?'dark':cur==='dark'?'pink':'light';
+  const icons={light:'🌙',dark:'🌸',pink:'☀️'};
+  html.setAttribute('data-theme',next);
+  document.getElementById('theme-icon').textContent=icons[next];
+  localStorage.setItem('crm-theme',next);
 };
 const saved=localStorage.getItem('crm-theme');
-if(saved){document.documentElement.setAttribute('data-theme',saved);document.getElementById('theme-icon').textContent=saved==='dark'?'☀️':'🌙';}
+if(saved){
+  const icons={light:'🌙',dark:'🌸',pink:'☀️'};
+  document.documentElement.setAttribute('data-theme',saved);
+  document.getElementById('theme-icon').textContent=icons[saved]||'🌙';
+}
 </script>
 
 <!-- AUTH -->
