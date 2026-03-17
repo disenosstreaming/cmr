@@ -283,6 +283,11 @@ tbody tr.row-vip td{background:rgba(91,61,200,.04);}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--surface);padding:8px 16px;border-radius:20px;font-size:13px;z-index:999;transition:transform .25s;pointer-events:none;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 .empty{text-align:center;padding:2.5rem 1rem;color:var(--text-muted);font-size:13px;}
+.field-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--border);font-size:12px;cursor:grab;}
+.field-chip:hover{border-color:var(--border-strong);}
+.field-type-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:12px;background:var(--surface);transition:all .15s;min-width:70px;}
+.field-type-btn:hover,.field-type-btn.sel{border-color:var(--accent);background:var(--accent-light);color:var(--accent);}
+.field-type-btn span{font-size:20px;}
 @keyframes ratRun{0%{transform:translateX(-4px) rotate(-5deg);}25%{transform:translateX(4px) rotate(5deg);}50%{transform:translateX(-4px) rotate(-5deg);}75%{transform:translateX(2px) rotate(3deg);}100%{transform:translateX(0) rotate(0deg);}}
 @keyframes ratShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-3px) rotate(-8deg);}40%{transform:translateX(3px) rotate(8deg);}60%{transform:translateX(-2px);}80%{transform:translateX(2px);}}
 .fue-rata-badge{display:inline-flex;align-items:center;gap:2px;font-size:10px;background:var(--danger-light);color:var(--danger);padding:1px 6px;border-radius:20px;margin-left:4px;cursor:default;}
@@ -584,6 +589,13 @@ window.renderDisenos=function(){
           </div>
           ${d.cliente?`<div style="font-size:12px;color:var(--text-muted)">👤 ${d.cliente}${d.celular?` · <a href="tel:${d.celular}" style="color:var(--info)">${d.celular}</a>`:''}</div>`:''}
           ${d.notas?`<div style="font-size:12px;color:var(--text-muted);margin-top:4px;white-space:pre-wrap">${d.notas}</div>`:''}
+          ${(()=>{
+            const ag=allGroups();const g=ag[curDisenoGroup];
+            const schema=g?.schema||[];
+            const cf=d.customFields||{};
+            const cfHtml=schema.filter(f=>cf[f.id]).map(f=>`<span style="font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;margin-right:4px;margin-top:4px;display:inline-block"><span style="color:var(--text-muted)">${f.name}:</span> ${cf[f.id]}</span>`).join('');
+            return cfHtml?`<div style="margin-top:6px;flex-wrap:wrap;display:flex;gap:2px">${cfHtml}</div>`:'';
+          })()}
           ${taskBar}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
@@ -623,6 +635,13 @@ window.openAddDiseno=function(){
   document.getElementById('d-notas').value='';
   document.getElementById('d-status').value='Pendiente';
   document.getElementById('diseno-modal-title').textContent='🎨 Nuevo pedido';
+  // Render custom fields
+  document.getElementById('d-custom-fields').innerHTML=renderCustomFields(curDisenoGroup,null);
+  // Update status options from group schema
+  const ag=allGroups();const g=ag[curDisenoGroup];
+  if(g?.statuses){
+    document.getElementById('d-status').innerHTML=g.statuses.map(s=>`<option>${s}</option>`).join('');
+  }
   renderDisenoTasksInModal();
   document.getElementById('diseno-modal').style.display='flex';
 };
@@ -637,6 +656,13 @@ window.openEditDiseno=function(id){
   document.getElementById('d-notas').value=d.notas||'';
   document.getElementById('d-status').value=d.status||'Pendiente';
   document.getElementById('diseno-modal-title').textContent='✏️ Editar pedido';
+  // Render custom fields with existing values
+  document.getElementById('d-custom-fields').innerHTML=renderCustomFields(curDisenoGroup,d.customFields||{});
+  // Update status options
+  const agE=allGroups();const gE=agE[curDisenoGroup];
+  if(gE?.statuses){
+    document.getElementById('d-status').innerHTML=gE.statuses.map(s=>`<option${d.status===s?' selected':''}>${s}</option>`).join('');
+  }
   renderDisenoTasksInModal();
   document.getElementById('diseno-modal').style.display='flex';
 };
@@ -648,6 +674,7 @@ window.saveDiseno=async function(){
   if(!desc){toast('La descripción es obligatoria');return;}
   const tasksObj={};
   disenoTasks.forEach((t,i)=>{tasksObj['task_'+i]={text:t.text,done:t.done};});
+  const customFields=getCustomFieldValues(curDisenoGroup);
   const data={
     nombre:desc,
     cliente:document.getElementById('d-cliente').value.trim(),
@@ -656,6 +683,7 @@ window.saveDiseno=async function(){
     notas:document.getElementById('d-notas').value.trim(),
     status:document.getElementById('d-status').value,
     tasks:tasksObj,
+    customFields,
     group:curDisenoGroup,
     tipo:'diseno',
     updatedAt:new Date().toISOString(),
@@ -695,8 +723,14 @@ window.openGroupMenu=function(gid){
   const ag=allGroups();const g=ag[gid];
   document.getElementById('grp-menu-name').textContent=g.name;
   document.getElementById('grp-menu-del').style.display=DEFAULT_GROUPS[gid]?'none':'block';
+  document.getElementById('grp-menu-fields').style.display=g?.type==='diseno'?'block':'none';
   document.getElementById('group-menu-modal').dataset.gid=gid;
   document.getElementById('group-menu-modal').style.display='flex';
+};
+window.openFieldBuilderFromMenu=function(){
+  const gid=document.getElementById('group-menu-modal').dataset.gid;
+  closeGroupMenu();
+  openFieldBuilder(gid);
 };
 window.closeGroupMenu=function(){document.getElementById('group-menu-modal').style.display='none';};
 window.editGroupFromMenu=function(){
@@ -1684,6 +1718,149 @@ window.setCategoryForGroup=async function(gid,catId){
   toast('Categoría actualizada ✓');
 };
 
+// ── FIELD BUILDER ──
+let fbGroupId='';
+let fbFields=[];
+let fbSelectedType='';
+const FIELD_TYPE_LABELS={text:'Texto',textarea:'Párrafo',number:'Número',date:'Fecha',phone:'Teléfono',select:'Estado'};
+const FIELD_TYPE_ICONS={text:'Aa',textarea:'📝',number:'🔢',date:'📅',phone:'📞',select:'🔽'};
+
+window.openFieldBuilder=function(gid){
+  fbGroupId=gid;fbSelectedType='';
+  const ag=allGroups();const g=ag[gid];
+  document.getElementById('fb-group-name').textContent=g?.name||gid;
+  // Load existing schema from Firebase
+  fbFields=[...(g?.schema||[])];
+  renderFBFields();
+  document.getElementById('fb-field-config').style.display='none';
+  document.getElementById('fb-field-name').value='';
+  document.getElementById('fb-select-options').value='';
+  document.getElementById('fb-field-required').checked=false;
+  // Reset type buttons
+  document.querySelectorAll('.field-type-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('field-builder-modal').style.display='flex';
+};
+window.closeFieldBuilder=function(){document.getElementById('field-builder-modal').style.display='none';};
+
+function renderFBFields(){
+  const list=document.getElementById('fb-fields-list');
+  if(!fbFields.length){
+    list.innerHTML='<div style="font-size:13px;color:var(--text-hint);padding:8px 0">No hay campos aún — agrega uno abajo</div>';
+    return;
+  }
+  list.innerHTML=fbFields.map((f,i)=>`
+    <div draggable="true" ondragstart="fbDragStart(${i})" ondragover="fbDragOver(event,${i})" ondrop="fbDrop(event,${i})"
+      style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;cursor:grab">
+      <span style="color:var(--text-hint);font-size:16px">⠿</span>
+      <span style="font-size:16px">${FIELD_TYPE_ICONS[f.type]||'📄'}</span>
+      <div style="flex:1">
+        <span style="font-size:13px;font-weight:500">${f.name}</span>
+        <span style="font-size:11px;color:var(--text-hint);margin-left:6px">${FIELD_TYPE_LABELS[f.type]||f.type}${f.required?' · requerido':''}</span>
+        ${f.type==='select'&&f.options?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${f.options.slice(0,4).join(' · ')}${f.options.length>4?'...':''}</div>`:''}
+      </div>
+      <button onclick="fbRemoveField(${i})" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:0 4px">×</button>
+    </div>`).join('');
+}
+
+let fbDragIdx=null;
+window.fbDragStart=function(i){fbDragIdx=i;};
+window.fbDragOver=function(e,i){e.preventDefault();};
+window.fbDrop=function(e,i){
+  e.preventDefault();
+  if(fbDragIdx===null||fbDragIdx===i)return;
+  const moved=fbFields.splice(fbDragIdx,1)[0];
+  fbFields.splice(i,0,moved);
+  fbDragIdx=null;
+  renderFBFields();
+};
+window.fbRemoveField=function(i){
+  fbFields.splice(i,1);
+  renderFBFields();
+};
+
+window.selectFieldType=function(type){
+  fbSelectedType=type;
+  document.querySelectorAll('.field-type-btn').forEach(b=>{
+    b.classList.toggle('sel',b.dataset.type===type);
+  });
+  document.getElementById('fb-field-config').style.display='block';
+  document.getElementById('fb-select-options-wrap').style.display=type==='select'?'block':'none';
+  document.getElementById('fb-field-name').focus();
+};
+
+window.addFieldToGroup=function(){
+  if(!fbSelectedType){toast('Selecciona un tipo de campo');return;}
+  const name=document.getElementById('fb-field-name').value.trim();
+  if(!name){toast('El nombre del campo es obligatorio');return;}
+  const required=document.getElementById('fb-field-required').checked;
+  const field={id:'f_'+Date.now(),name,type:fbSelectedType,required};
+  if(fbSelectedType==='select'){
+    const opts=document.getElementById('fb-select-options').value.trim().split('\n').map(o=>o.trim()).filter(Boolean);
+    if(!opts.length){toast('Agrega al menos una opción');return;}
+    field.options=opts;
+  }
+  fbFields.push(field);
+  renderFBFields();
+  // Reset
+  document.getElementById('fb-field-name').value='';
+  document.getElementById('fb-select-options').value='';
+  document.getElementById('fb-field-required').checked=false;
+  document.getElementById('fb-field-config').style.display='none';
+  document.querySelectorAll('.field-type-btn').forEach(b=>b.classList.remove('sel'));
+  fbSelectedType='';
+  toast('Campo agregado ✓');
+};
+
+window.saveFieldSchema=async function(){
+  const ag=allGroups();const g=ag[fbGroupId];
+  const schemaObj={};
+  fbFields.forEach((f,i)=>{schemaObj['f'+i]=f;});
+  if(DEFAULT_GROUPS[fbGroupId]){
+    await set(ref(db,`groups/${fbGroupId}`),{...DEFAULT_GROUPS[fbGroupId],...(groups[fbGroupId]||{}),schema:fbFields});
+  }else{
+    await update(ref(db,`groups/${fbGroupId}`),{schema:fbFields});
+  }
+  closeFieldBuilder();
+  toast('✓ Campos guardados');
+};
+
+// Render custom fields in diseño modal
+function renderCustomFields(gid, existingData){
+  const ag=allGroups();const g=ag[gid];
+  const schema=g?.schema||[];
+  if(!schema.length)return'';
+  return schema.map(f=>{
+    const val=existingData?.[f.id]||'';
+    const inputStyle='width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);outline:none;';
+    let input='';
+    if(f.type==='text'||f.type==='phone')
+      input=`<input id="cf_${f.id}" value="${val.replace(/"/g,'&quot;')}" placeholder="${f.name}..." style="${inputStyle}">`;
+    else if(f.type==='textarea')
+      input=`<textarea id="cf_${f.id}" style="${inputStyle}min-height:60px;resize:vertical;">${val}</textarea>`;
+    else if(f.type==='number')
+      input=`<input type="number" id="cf_${f.id}" value="${val}" placeholder="0" style="${inputStyle}">`;
+    else if(f.type==='date')
+      input=`<input type="date" id="cf_${f.id}" value="${val}" style="${inputStyle}">`;
+    else if(f.type==='select')
+      input=`<select id="cf_${f.id}" style="${inputStyle}cursor:pointer;">${(f.options||[]).map(o=>`<option${val===o?' selected':''}>${o}</option>`).join('')}</select>`;
+    return`<div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">${f.name}${f.required?' *':''}</label>
+      ${input}
+    </div>`;
+  }).join('');
+}
+
+function getCustomFieldValues(gid){
+  const ag=allGroups();const g=ag[gid];
+  const schema=g?.schema||[];
+  const data={};
+  schema.forEach(f=>{
+    const el=document.getElementById('cf_'+f.id);
+    if(el)data[f.id]=el.value||'';
+  });
+  return data;
+}
+
 window.openAddBL=function(){
   buildDynFields('bl-phones',[],'+51 9XX XXX XXX');
   buildDynFields('bl-telegrams',[],'@usuario');
@@ -1814,6 +1991,7 @@ if(saved){
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn green" onclick="openAddDiseno()" style="background:#9b59b6;border-color:#9b59b6">+ Agregar pedido</button>
+              <button class="btn" onclick="openFieldBuilder(curDisenoGroup)" style="border-color:#9b59b6;color:#9b59b6">🔧 Campos</button>
               <select id="disenos-filter" onchange="renderDisenos()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);font-family:inherit;font-size:13px;color:var(--text);outline:none;cursor:pointer;">
                 <option value="">Todos los estados</option>
                 <option value="Pendiente">⏳ Pendiente</option>
@@ -1985,6 +2163,7 @@ if(saved){
     <h2 id="grp-menu-name"></h2>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:.5rem">
       <button class="btn" onclick="editGroupFromMenu()">✏️ Editar nombre, color y estados</button>
+      <button class="btn" id="grp-menu-fields" onclick="openFieldBuilderFromMenu()" style="display:none">🔧 Configurar campos</button>
       <button class="btn" onclick="changeCategoryFromMenu()">📁 Cambiar categoría</button>
       <button class="btn red" id="grp-menu-del" onclick="deleteGroupFromMenu()">🗑 Eliminar grupo</button>
     </div>
@@ -2006,6 +2185,7 @@ if(saved){
         </select>
       </div>
       <div class="form-group full"><label>Notas / Descripción detallada</label><textarea id="d-notas" style="min-height:80px"></textarea></div>
+      <div class="form-group full" id="d-custom-fields"></div>
     </div>
     <!-- Tareas -->
     <div style="margin-top:1rem">
@@ -2043,6 +2223,59 @@ if(saved){
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- FIELD BUILDER MODAL -->
+<div class="overlay" id="field-builder-modal" style="display:none" onclick="if(event.target===this)closeFieldBuilder()">
+  <div class="modal" style="max-width:560px;max-height:90vh;overflow-y:auto">
+    <h2>🔧 Campos del grupo <span id="fb-group-name" style="color:var(--accent)"></span></h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Define qué información quieres guardar para cada pedido de este grupo.</p>
+    
+    <!-- Current fields -->
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Campos actuales</div>
+      <div id="fb-fields-list" style="min-height:40px"></div>
+    </div>
+
+    <!-- Add new field -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:14px">
+      <div style="font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Agregar campo</div>
+      <!-- Type selector -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="fb-type-selector">
+        <div class="field-type-btn" onclick="selectFieldType('text')" data-type="text"><span>Aa</span>Texto</div>
+        <div class="field-type-btn" onclick="selectFieldType('textarea')" data-type="textarea"><span>📝</span>Párrafo</div>
+        <div class="field-type-btn" onclick="selectFieldType('number')" data-type="number"><span>🔢</span>Número</div>
+        <div class="field-type-btn" onclick="selectFieldType('date')" data-type="date"><span>📅</span>Fecha</div>
+        <div class="field-type-btn" onclick="selectFieldType('phone')" data-type="phone"><span>📞</span>Teléfono</div>
+        <div class="field-type-btn" onclick="selectFieldType('select')" data-type="select"><span>🔽</span>Estado</div>
+      </div>
+      <!-- Field config -->
+      <div id="fb-field-config" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Nombre del campo *</label>
+            <input id="fb-field-name" placeholder="Ej: Precio, Plataforma, Link..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);outline:none;">
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted);padding-bottom:8px;cursor:pointer">
+              <input type="checkbox" id="fb-field-required" style="accent-color:var(--accent)"> Requerido
+            </label>
+          </div>
+        </div>
+        <!-- Select options (only shown for select type) -->
+        <div id="fb-select-options-wrap" style="display:none;margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Opciones (una por línea)</label>
+          <textarea id="fb-select-options" placeholder="Opción 1&#10;Opción 2&#10;Opción 3" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);outline:none;min-height:80px;resize:vertical;"></textarea>
+        </div>
+        <button class="btn green" onclick="addFieldToGroup()" style="width:100%">+ Agregar este campo</button>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn" onclick="closeFieldBuilder()">Cancelar</button>
+      <button class="btn green" onclick="saveFieldSchema()">✓ Guardar cambios</button>
+    </div>
+  </div>
+</div>
 
 <!-- MANAGE CATEGORIES MODAL -->
 <div class="overlay" id="manage-cats-modal" style="display:none" onclick="if(event.target===this)closeManageCategories()">
