@@ -171,9 +171,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .bulk-bar{display:none;align-items:center;gap:8px;padding:8px 12px;background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--r);margin-bottom:.75rem;font-size:13px;color:var(--accent);}
 .bulk-bar.show{display:flex;}
 /* TABLE */
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 320px);}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;overflow-x:auto;}
 table{width:100%;border-collapse:collapse;min-width:800px;}
-thead th{padding:9px 12px;text-align:left;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:var(--bg);border-bottom:2px solid var(--border-strong);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;z-index:5;box-shadow:0 1px 0 var(--border);}
+thead th{padding:9px 12px;text-align:left;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
 thead th:hover{color:var(--text);}
 tbody tr{transition:background .1s;}
 tbody tr:hover td{background:var(--bg);}
@@ -280,7 +280,7 @@ tbody tr.row-vip td{background:rgba(91,61,200,.04);}
 .bl-tag.tel{color:var(--info);}
 .bl-tag.tg{color:var(--purple);}
 /* PAGINATION */
-.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-top:none;background:var(--bg);font-size:12px;color:var(--text-muted);border-radius:0 0 var(--rl) var(--rl);}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);background:var(--bg);font-size:12px;color:var(--text-muted);}
 .page-btns{display:flex;gap:6px;align-items:center;}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--surface);padding:8px 16px;border-radius:20px;font-size:13px;z-index:999;transition:transform .25s;pointer-events:none;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -2037,8 +2037,8 @@ if(saved){
             </tr></thead>
             <tbody id="tbody"></tbody>
           </table>
+          <div class="pagination" id="pagination"></div>
         </div>
-        <div class="pagination" id="pagination"></div>
       </div>
 
       <!-- DISEÑOS PAGE -->
