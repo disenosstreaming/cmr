@@ -874,6 +874,23 @@ window.changePage=function(d){page+=d;renderTable();};
 window.toggleSel=function(id,checked){if(checked)sel.add(id);else sel.delete(id);renderBulkBar();};
 window.selAll=function(checked){const all=getFiltered().slice((page-1)*PS,page*PS);all.forEach(c=>checked?sel.add(c._id):sel.delete(c._id));renderTable();renderBulkBar();};
 window.clearSel=function(){sel.clear();renderTable();renderBulkBar();};
+window.bulkAviso=async function(){
+  if(sel.size===0){toast('Selecciona contactos primero');return;}
+  const targets=[...sel];
+  const upd={};
+  const now=new Date().toISOString();
+  targets.forEach(tid=>{
+    const c=contacts[tid];if(!c)return;
+    upd[`contacts/${tid}/status`]='Aviso enviado';
+    upd[`contacts/${tid}/avisoAt`]=now;
+    upd[`contacts/${tid}/avisoBy`]=cu.email;
+    upd[`contacts/${tid}/statusHistory/${Date.now()+'_aviso_'+tid.slice(-3)}`]={from:c.status,to:'Aviso enviado',at:now,by:cu.email};
+  });
+  await update(ref(db),upd);
+  const n=targets.length;
+  sel.clear();renderBulkBar();
+  toast(`📢 Aviso registrado para ${n} contacto${n>1?'s':''} ✓`);
+};
 window.openBulkMove=function(){
   document.getElementById('bulk-move-modal').style.display='flex';
   document.getElementById('bulk-sg').innerHTML=getGroupStatuses().map(s=>`<div class="status-opt" onclick="bulkStatus('${s}')">${SE[s]||''} ${s}</div>`).join('');
@@ -1000,21 +1017,15 @@ window.saveEdit=async function(){
 
 // DELETE
 window.sendAviso=async function(id){
-  // If contacts are selected, apply to all selected; otherwise just this one
-  const targets=sel.size>0?[...sel]:[id];
-  const upd={};
-  targets.forEach(tid=>{
-    const c=contacts[tid];if(!c)return;
-    upd[`contacts/${tid}/status`]='Aviso enviado';
-    upd[`contacts/${tid}/avisoAt`]=new Date().toISOString();
-    upd[`contacts/${tid}/avisoBy`]=cu.email;
-    const histKey=Date.now()+'_aviso_'+tid.slice(-3);
-    upd[`contacts/${tid}/statusHistory/${histKey}`]={from:c.status,to:'Aviso enviado',at:new Date().toISOString(),by:cu.email};
+  const c=contacts[id];if(!c)return;
+  const now=new Date().toISOString();
+  await update(ref(db,`contacts/${id}`),{
+    status:'Aviso enviado',
+    avisoAt:now,
+    avisoBy:cu.email,
+    [`statusHistory/${Date.now()}_aviso`]:{from:c.status,to:'Aviso enviado',at:now,by:cu.email}
   });
-  await update(ref(db),upd);
-  const n=targets.length;
-  if(sel.size>0){sel.clear();renderBulkBar();}
-  toast(`📢 Aviso registrado para ${n} contacto${n>1?'s':''}`);
+  toast('📢 Aviso registrado — '+c.nombre);
 };
 window.delContact=async function(id){
   if(!confirm('¿Eliminar?'))return;
@@ -1199,6 +1210,7 @@ if(saved){document.documentElement.setAttribute('data-theme',saved);document.get
         </div><!-- /sticky-header -->
         <div class="bulk-bar" id="bulk-bar">
           <span id="bulk-count"></span>
+          <button class="btn" style="border-color:#1a6b47;color:#1a5c38;font-weight:500" onclick="bulkAviso()">📢 Aviso a seleccionados</button>
           <button class="btn green" onclick="openBulkMove()">Cambiar estado</button>
           <button class="btn red" onclick="bulkDelete()">Eliminar</button>
           <button class="btn ghost" onclick="clearSel()">Cancelar</button>
