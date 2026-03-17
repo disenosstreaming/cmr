@@ -1000,14 +1000,21 @@ window.saveEdit=async function(){
 
 // DELETE
 window.sendAviso=async function(id){
-  const c=contacts[id];if(!c)return;
-  await update(ref(db,`contacts/${id}`),{
-    status:'Aviso enviado',
-    avisoAt:new Date().toISOString(),
-    avisoBy:cu.email,
-    statusHistory:{...(c.statusHistory||{}), [Date.now()+'_aviso']:{from:c.status,to:'Aviso enviado',at:new Date().toISOString(),by:cu.email}}
+  // If contacts are selected, apply to all selected; otherwise just this one
+  const targets=sel.size>0?[...sel]:[id];
+  const upd={};
+  targets.forEach(tid=>{
+    const c=contacts[tid];if(!c)return;
+    upd[`contacts/${tid}/status`]='Aviso enviado';
+    upd[`contacts/${tid}/avisoAt`]=new Date().toISOString();
+    upd[`contacts/${tid}/avisoBy`]=cu.email;
+    const histKey=Date.now()+'_aviso_'+tid.slice(-3);
+    upd[`contacts/${tid}/statusHistory/${histKey}`]={from:c.status,to:'Aviso enviado',at:new Date().toISOString(),by:cu.email};
   });
-  toast('📢 Aviso registrado — '+c.nombre);
+  await update(ref(db),upd);
+  const n=targets.length;
+  if(sel.size>0){sel.clear();renderBulkBar();}
+  toast(`📢 Aviso registrado para ${n} contacto${n>1?'s':''}`);
 };
 window.delContact=async function(id){
   if(!confirm('¿Eliminar?'))return;
@@ -1175,6 +1182,7 @@ if(saved){document.documentElement.setAttribute('data-theme',saved);document.get
     <div style="flex:1;min-width:0;overflow:hidden;">
       <!-- CRM PAGE -->
       <div id="crm-page" class="main">
+        <div id="sticky-header" style="position:sticky;top:50px;z-index:15;background:var(--bg);padding-bottom:4px;margin-bottom:0;">
         <div class="page-title">
           <div id="page-dot" style="width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>
           <span id="page-title">Suscriptores</span>
@@ -1188,6 +1196,7 @@ if(saved){document.documentElement.setAttribute('data-theme',saved);document.get
           <div class="stat" data-filter="avisados" onclick="doFilter('Aviso enviado')" style="border-left:3px solid var(--accent)"><div class="stat-label">📢 Avisados</div><div class="stat-val c-green" id="s-avisados">0</div></div>
         </div>
         <div class="tabs" id="tab-bar"></div>
+        </div><!-- /sticky-header -->
         <div class="bulk-bar" id="bulk-bar">
           <span id="bulk-count"></span>
           <button class="btn green" onclick="openBulkMove()">Cambiar estado</button>
