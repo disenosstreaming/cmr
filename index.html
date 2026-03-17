@@ -898,11 +898,15 @@ window.openBulkMove=function(){
 window.closeBulkMove=function(){document.getElementById('bulk-move-modal').style.display='none';};
 window.bulkStatus=async function(status){
   const upd={};
+  let i=0;
+  const now=new Date().toISOString();
   sel.forEach(id=>{
     const c=contacts[id];
-    if(c&&c.status!==status){
+    if(c){
       upd[`contacts/${id}/status`]=status;
-      upd[`contacts/${id}/statusHistory/${Date.now()}_${id.slice(-3)}`]={from:c.status,to:status,at:new Date().toISOString(),by:cu.email};
+      if(c.status!==status){
+        upd[`contacts/${id}/statusHistory/bulk_${Date.now()}_${i++}`]={from:c.status,to:status,at:now,by:cu.email};
+      }
     }
   });
   const n=Object.keys(upd).filter(k=>k.endsWith('/status')).length;
@@ -1046,10 +1050,22 @@ window.openMove=function(id){
 };
 window.closeMove=function(){document.getElementById('move-modal').style.display='none';};
 window.setStatus=async function(id,status){
-  const c=contacts[id];const upd={status};
-  if(c&&c.status&&c.status!==status){upd[`statusHistory/${Date.now()}_move`]={from:c.status,to:status,at:new Date().toISOString(),by:cu.email};}
-  await update(ref(db,`contacts/${id}`),upd);
-  closeMove();if(detailId===id)renderPanel();toast('Estado: '+status);
+  // If contacts are selected, apply to all; otherwise just this one
+  const targets=sel.size>0?[...sel]:[id];
+  const bulkUpd={};
+  targets.forEach(tid=>{
+    const c=contacts[tid];if(!c)return;
+    bulkUpd[`contacts/${tid}/status`]=status;
+    if(c.status&&c.status!==status){
+      bulkUpd[`contacts/${tid}/statusHistory/${Date.now()}_${tid.slice(-3)}`]={from:c.status,to:status,at:new Date().toISOString(),by:cu.email};
+    }
+  });
+  await update(ref(db),bulkUpd);
+  const n=targets.length;
+  if(sel.size>0){sel.clear();renderBulkBar();}
+  closeMove();
+  if(targets.includes(detailId))renderPanel();
+  toast(`Estado "${status}" aplicado a ${n} contacto${n>1?'s':''} ✓`);
 };
 
 // DETAIL
