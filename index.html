@@ -1209,8 +1209,8 @@ if(saved){document.documentElement.setAttribute('data-theme',saved);document.get
     <div style="flex:1;min-width:0;overflow:hidden;">
       <!-- CRM PAGE -->
       <div id="crm-page" class="main">
-        <div id="sticky-header" style="position:sticky;top:50px;z-index:15;background:var(--bg);padding-bottom:4px;margin-bottom:0;">
-        <div class="page-title">
+        <div id="sticky-header" style="position:sticky;top:50px;z-index:15;background:var(--bg);padding-bottom:0;margin-bottom:0;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+        <div class="page-title" style="padding-top:1.25rem;padding-left:0;padding-right:0;">
           <div id="page-dot" style="width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>
           <span id="page-title">Suscriptores</span>
         </div>
@@ -1223,6 +1223,11 @@ if(saved){document.documentElement.setAttribute('data-theme',saved);document.get
           <div class="stat" data-filter="avisados" onclick="doFilter('Aviso enviado')" style="border-left:3px solid var(--accent)"><div class="stat-label">📢 Avisados</div><div class="stat-val c-green" id="s-avisados">0</div></div>
         </div>
         <div class="tabs" id="tab-bar"></div>
+        <div class="toolbar" style="padding:8px 0;">
+          <button class="btn green" onclick="openAdd()">+ Agregar contacto</button>
+          <input type="text" placeholder="Buscar nombre, teléfono, telegram..." oninput="doSearch(this.value)">
+          <select id="fsel" onchange="doFilter(this.value)"><option value="">Todos los estados</option></select>
+        </div>
         </div><!-- /sticky-header -->
         <div class="bulk-bar" id="bulk-bar">
           <span id="bulk-count"></span>
@@ -1230,11 +1235,6 @@ if(saved){document.documentElement.setAttribute('data-theme',saved);document.get
           <button class="btn green" onclick="openBulkMove()">Cambiar estado</button>
           <button class="btn red" onclick="bulkDelete()">Eliminar</button>
           <button class="btn ghost" onclick="clearSel()">Cancelar</button>
-        </div>
-        <div class="toolbar">
-          <button class="btn green" onclick="openAdd()">+ Agregar contacto</button>
-          <input type="text" placeholder="Buscar nombre, teléfono, telegram..." oninput="doSearch(this.value)">
-          <select id="fsel" onchange="doFilter(this.value)"><option value="">Todos los estados</option></select>
         </div>
         <div class="table-wrap">
           <table>
