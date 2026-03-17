@@ -633,7 +633,7 @@ function renderTable(){
       <td style="color:var(--text-muted);font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis">${getTelegrams(c)[0]||'—'}</td>
       <td><span class="pill ${SC[c.status]||''}" onclick="openMove('${c._id}')">${SE[c.status]||''} ${c.status||'—'}</span></td>
       <td><div class="actions">
-        ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=3))?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
+        ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=1))||(c.status==='Vencido'&&c.status!=='Aviso enviado')||(c.status==='Activado'&&du(c.vencimiento)<0)?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
         ${c.status==='Aviso enviado'?`<span style="font-size:11px;color:var(--accent)">✓ Avisado</span>`:''}
         <button class="btn amber" onclick="openEdit('${c._id}')">Editar</button>
         <button class="btn red" onclick="delContact('${c._id}')">×</button>
@@ -748,7 +748,7 @@ function renderCrunchyTable(){
       <td class="${dc(c.vencimiento)}">${fd(c.vencimiento)}<span style="font-size:11px">${ds(c.vencimiento)}</span></td>
       <td><span class="pill ${sc}" onclick="openMove('${c._id}')">${c.status||'—'}</span></td>
       <td><div class="actions">
-        ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=3))?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
+        ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=1))||(c.status==='Vencido'&&c.status!=='Aviso enviado')||(c.status==='Activado'&&du(c.vencimiento)<0)?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
         ${c.status==='Aviso enviado'?`<span style="font-size:11px;color:var(--accent)">✓ Avisado</span>`:''}
         <button class="btn amber" onclick="openEdit('${c._id}')">Editar</button>
         <button class="btn red" onclick="delContact('${c._id}')">×</button>
