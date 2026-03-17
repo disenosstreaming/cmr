@@ -961,8 +961,14 @@ window.importExcel=async function(event){
       
       const pushOps=[];
       for(const row of dataRows){
-        const nombre=String(row[colNombre]||'').trim();
-        if(!nombre||nombre==='...'||nombre.toLowerCase()==='agregar nombre del perfil')continue;
+        let nombre=String(row[colNombre]||'').trim();
+        if(nombre==='...'||nombre.toLowerCase()==='agregar nombre del perfil')nombre='';
+        // Skip only if no name AND no phone AND no telegram
+        const hasTel=colTel>=0&&row[colTel];
+        const hasTg=colTg>=0&&row[colTg];
+        if(!nombre&&!hasTel&&!hasTg)continue;
+        // Use placeholder if no name
+        if(!nombre)nombre='Sin nombre (fila '+(pushOps.length+1)+')'  ;
         
         let tel=colTel>=0?String(row[colTel]||'').trim():'';
         if(tel&&!tel.startsWith('+')&&tel.length>6)tel='+'+tel.replace(/\D/g,'');
