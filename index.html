@@ -196,6 +196,8 @@ tbody tr:last-child td{border-bottom:none;}
 .p-rata{background:var(--danger-light);color:#7a1a0a;}
 .p-aviso{background:#e8f3ed;color:#1a5c38;border:1px solid #1a6b47;}
 .p-referido{background:#e8f0fb;color:#5b3dc8;border:1px solid #8a6edc;}
+.p-noesperar{background:#fff0e0;color:#c05000;border:1px solid #e07030;}
+.p-noesperar{background:#fff0e0;color:#c0390b;border:1px solid #e07030;}
 .tel-link{color:var(--info);font-family:'DM Mono',monospace;font-size:12px;text-decoration:none;}
 .tel-link:hover{text-decoration:underline;}
 .date-warn{color:var(--warn);font-weight:500;}
@@ -283,11 +285,21 @@ tbody tr.row-vip td{background:rgba(91,61,200,.04);}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--surface);padding:8px 16px;border-radius:20px;font-size:13px;z-index:999;transition:transform .25s;pointer-events:none;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 .empty{text-align:center;padding:2.5rem 1rem;color:var(--text-muted);font-size:13px;}
+@keyframes noEsperarPulse{0%,100%{background:rgba(192,57,43,.08);}50%{background:rgba(192,57,43,.16);}}
+@keyframes scissors{0%,100%{transform:rotate(0deg);}25%{transform:rotate(-20deg);}75%{transform:rotate(20deg);}}
+tbody tr.row-noesperar td{animation:noEsperarPulse 2s ease-in-out infinite;}
+.scissors-anim{display:inline-block;animation:scissors 1s ease-in-out infinite;}
 .field-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--border);font-size:12px;cursor:grab;}
 .field-chip:hover{border-color:var(--border-strong);}
 .field-type-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:12px;background:var(--surface);transition:all .15s;min-width:70px;}
 .field-type-btn:hover,.field-type-btn.sel{border-color:var(--accent);background:var(--accent-light);color:var(--accent);}
 .field-type-btn span{font-size:20px;}
+@keyframes alertPulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+@keyframes scissorShake{0%,100%{transform:rotate(0deg);}25%{transform:rotate(-15deg);}75%{transform:rotate(15deg);}}
+.row-noesperar-vencido td{background:rgba(220,50,0,.07)!important;border-bottom:1px solid rgba(220,50,0,.15)!important;}
+.row-noesperar-vencido td:first-child{border-left:3px solid #e07030;}
+.no-esperar-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;background:#fff0e0;color:#c05000;border:1px solid #e07030;padding:2px 7px;border-radius:20px;margin-left:4px;font-weight:500;}
+.no-esperar-badge .sc-emoji{display:inline-block;animation:scissorShake 0.8s ease-in-out infinite;}
 @keyframes ratRun{0%{transform:translateX(-4px) rotate(-5deg);}25%{transform:translateX(4px) rotate(5deg);}50%{transform:translateX(-4px) rotate(-5deg);}75%{transform:translateX(2px) rotate(3deg);}100%{transform:translateX(0) rotate(0deg);}}
 @keyframes ratShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-3px) rotate(-8deg);}40%{transform:translateX(3px) rotate(8deg);}60%{transform:translateX(-2px);}80%{transform:translateX(2px);}}
 .fue-rata-badge{display:inline-flex;align-items:center;gap:2px;font-size:10px;background:var(--danger-light);color:var(--danger);padding:1px 6px;border-radius:20px;margin-left:4px;cursor:default;}
@@ -309,11 +321,11 @@ const fbApp=initializeApp(FC);
 const auth=getAuth(fbApp);
 const db=getDatabase(fbApp);
 
-const ALL_STATUSES=['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata','Aviso enviado','Referido'];
+const ALL_STATUSES=['Activado','Cobrar','Vencido','Cortado','VIP','Sospechoso','Pendiente','Rata','Aviso enviado','Referido','No esperar'];
 const CRUNCHY_STATUSES=['En uso','Caída','Libre','Cortar perfiles','1 aviso','2 aviso'];
 const CRUNCHY_SC={'En uso':'p-activado','Caída':'p-vencido','Libre':'p-pendiente','Cortar perfiles':'p-cortado','1 aviso':'p-cobrar','2 aviso':'p-rata'};
-const SC={Activado:'p-activado',Cobrar:'p-cobrar',Vencido:'p-vencido',Cortado:'p-cortado',VIP:'p-vip',Sospechoso:'p-sospechoso',Pendiente:'p-pendiente',Rata:'p-rata','Aviso enviado':'p-aviso','Referido':'p-referido'};
-const SE={Sospechoso:'🕵️',Rata:'🐀',VIP:'👑',Referido:'🤝'};
+const SC={Activado:'p-activado',Cobrar:'p-cobrar',Vencido:'p-vencido',Cortado:'p-cortado',VIP:'p-vip',Sospechoso:'p-sospechoso',Pendiente:'p-pendiente',Rata:'p-rata','Aviso enviado':'p-aviso','Referido':'p-referido','No esperar':'p-noesperar'};
+const SE={Sospechoso:'🕵️',Rata:'🐀',VIP:'👑',Referido:'🤝','No esperar':'✂️'};
 const GROUP_COLORS=['#1a6b47','#1a4f6b','#5b3dc8','#b45309','#c0392b','#9b3060','#2d6b5a','#6b4a1a'];
 
 // Default groups baked in
@@ -344,7 +356,17 @@ function du(d){if(!d)return null;const t=new Date();t.setHours(0,0,0,0);return M
 function dc(d){const x=du(d);if(x===null)return'';if(x<0)return'date-expired';if(x<=5)return'date-warn';return'date-ok';}
 function ds(d){const x=du(d);if(x===null)return'';if(x<0)return` (hace ${Math.abs(x)}d)`;if(x===0)return' (hoy)';if(x<=7)return` (en ${x}d)`;return'';}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
-function rc(c){if(c.status==='Sospechoso')return'row-sospechoso';if(c.status==='Rata')return'row-rata';if(c.status==='VIP')return'row-vip';return'';}
+function rc(c){
+  if(c.status==='Sospechoso')return'row-sospechoso';
+  if(c.status==='Rata')return'row-rata';
+  if(c.status==='VIP')return'row-vip';
+  // No esperar: highlight when vencido or close to vencimiento
+  if(c.tipo==='No esperar'||c.status==='No esperar'||c._noEsperar){
+    const d=du(c.vencimiento);
+    if(d!==null&&d<=0)return'row-noesperar';
+  }
+  return'';
+}
 function norm(s){return(s||'').toLowerCase().replace(/\s+/g,'').replace(/[+\-.()]/g,'');}
 function getPhones(c){return[c.telefono,c.telefono2,...(c.telefonos||[])].filter(Boolean);}
 function getTelegrams(c){return[c.telegram,...(c.telegrams||[])].filter(Boolean);}
@@ -922,7 +944,9 @@ function renderTable(){
     const hist=c.statusHistory?Object.values(c.statusHistory):[];
     const wasRata=hist.some(h=>h.from==='Rata')||c.tipo==='Rata';
     const wasVIP=hist.some(h=>h.from==='VIP')||c.tipo==='VIP';
-    const prevBadge=wasRata?`<span class="fue-rata-badge" title="¡Ojo! Este contacto fue Rata anteriormente"><span class="rat-emoji">🐀</span> fue rata</span>`
+    const isNoEsperar=c._noEsperar||c.status==='No esperar'||c.tipo==='No esperar';
+    const prevBadge=isNoEsperar?`<span title="¡No esperar! Siempre promete y no paga" style="display:inline-flex;align-items:center;gap:2px;font-size:10px;background:#fff0e0;color:#c0390b;padding:1px 6px;border-radius:20px;margin-left:3px;border:1px solid #e07030"><span class="scissors-anim">✂️</span> no esperar</span>`
+      :wasRata?`<span class="fue-rata-badge" title="¡Ojo! Este contacto fue Rata anteriormente"><span class="rat-emoji">🐀</span> fue rata</span>`
       :wasVIP?`<span class="fue-vip-badge" title="Fue VIP anteriormente">👑 fue VIP</span>`:'';
     const allPhones=getPhones(c);
   const isCrunchyContact=c.tipo==='crunchyroll';
@@ -934,6 +958,7 @@ function renderTable(){
         <span class="name-text open-detail" data-id="${c._id}">${c.nombre||'—'}</span>
         ${emoji?`<span style="font-size:13px;margin-left:2px">${emoji}</span>`:''}
         ${prevBadge}
+        ${noEsperarBadge}
         ${hasUp?`<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-left:4px"></span>`:''}
       </div></td>
       <td>${phoneHtml}</td>
@@ -1511,6 +1536,31 @@ window.saveEdit=async function(){
 };
 
 // DELETE
+window.undoAviso=async function(id){
+  const c=contacts[id];if(!c)return;
+  // Find previous status from history
+  const hist=c.statusHistory?Object.values(c.statusHistory).sort((a,b)=>a.at>b.at?-1:1):[];
+  const prev=hist.find(h=>h.to==='Aviso enviado');
+  const prevStatus=prev?prev.from:'Activado';
+  await update(ref(db,`contacts/${id}`),{
+    status:prevStatus,
+    [`statusHistory/${Date.now()}_undo`]:{from:'Aviso enviado',to:prevStatus,at:new Date().toISOString(),by:cu.email}
+  });
+  toast(`↩ Aviso deshecho — vuelve a ${prevStatus}`);
+};
+window.undoAviso=async function(id){
+  const c=contacts[id];if(!c)return;
+  // Find previous status from history
+  const hist=c.statusHistory?Object.values(c.statusHistory).sort((a,b)=>b.at>a.at?1:-1):[];
+  const prev=hist.find(h=>h.to==='Aviso enviado');
+  const backTo=prev?.from||'Activado';
+  const now=new Date().toISOString();
+  await update(ref(db,`contacts/${id}`),{
+    status:backTo,
+    [`statusHistory/${Date.now()}_undo`]:{from:'Aviso enviado',to:backTo,at:now,by:cu.email}
+  });
+  toast('↩ Aviso deshecho — volvió a '+backTo);
+};
 window.sendAviso=async function(id){
   const c=contacts[id];if(!c)return;
   const now=new Date().toISOString();
@@ -1596,7 +1646,8 @@ function renderPanel(){
       </div>
     </div>
     <div class="panel-row"><span class="panel-label">Estado</span><span class="pill ${SC[c.status]||''}" onclick="openMove('${detailId}')">${SE[c.status]||''} ${c.status||'—'}</span></div>
-    ${g?`<div class="panel-row"><span class="panel-label">Grupo</span><span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block"></span>${g.name}</span></div>`:''}
+    \${(c._noEsperar||c.status==='No esperar')?`<div style="background:#fff0e0;border:1px solid #e07030;border-radius:var(--r);padding:8px 12px;margin-bottom:8px;font-size:13px;color:#c0390b;display:flex;align-items:center;gap:8px"><span class="scissors-anim" style="font-size:18px">✂️</span><span><strong>No esperar</strong> — Este cliente siempre promete pagar pero no cumple. No dar más tiempo.</span></div>`:''}
+    \${g?`<div class="panel-row"><span class="panel-label">Grupo</span><span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block"></span>${g.name}</span></div>`:''}
     ${c.tipo?`<div class="panel-row"><span class="panel-label">Tipo</span><span class="pill ${SC[c.tipo]||''}" style="cursor:default">${SE[c.tipo]||''} ${c.tipo}</span></div>`:''}
     ${c.notas?`<div class="panel-row" style="align-items:flex-start"><span class="panel-label">Notas</span><span style="font-size:13px;color:var(--text-muted);text-align:right;max-width:220px;white-space:normal">${c.notas}</span></div>`:''}
     <div class="section-title">Historial de estados</div>
