@@ -1024,26 +1024,34 @@ window.showImportConfirm=function(ops,blHits,total){
   const modal=document.createElement('div');
   modal.id='import-confirm';
   modal.className='overlay';
+  const gStatuses=getGroupStatuses();
+  const statusOptions=gStatuses.map(s=>`<option value="${s}"${s==='Activado'||s==='En uso'?' selected':''}>${s}</option>`).join('');
   modal.innerHTML=`<div class="modal" style="max-width:480px">
     <h2>📥 Importar Excel</h2>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Se encontraron <strong>${total}</strong> contactos. Los duplicados (mismo teléfono o Telegram) se omitirán automáticamente. al grupo <strong>${(allGroups()[curGroup]||{}).name||curGroup}</strong>.</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Se encontraron <strong>${total}</strong> contactos para importar al grupo <strong>${(allGroups()[curGroup]||{}).name||curGroup}</strong>.</p>
     ${blHits.length>0?`<div style="background:var(--danger-light);border:1px solid var(--danger);border-radius:var(--r);padding:10px 12px;margin-bottom:1rem;font-size:13px;color:var(--danger)">
-      <strong>⚠ ${blHits.length} contacto${blHits.length>1?'s':''} coincide${blHits.length>1?'n':''} con la lista negra:</strong><br>
-      ${blHits.slice(0,5).map(c=>`🐀 ${c.nombre} (${c._blMatches.map(m=>m.nombre).join(', ')})`).join('<br>')}
-      ${blHits.length>5?`<br>...y ${blHits.length-5} más`:''}
+      <strong>⚠ ${blHits.length} coincide${blHits.length>1?'n':''} con lista negra:</strong><br>
+      ${blHits.slice(0,3).map(c=>'🐀 '+c.nombre).join('<br>')}
+      ${blHits.length>3?'<br>...y '+(blHits.length-3)+' más':''}
     </div>`:''}
-    <div style="font-size:13px;margin-bottom:1rem">¿Deseas continuar con la importación?</div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:1rem;">
+      <div style="font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Estado con el que se importarán</div>
+      <select id="import-status" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:14px;background:var(--surface);color:var(--text);outline:none;">
+        ${statusOptions}
+      </select>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:6px">Puedes cambiarlo individualmente después</div>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="document.getElementById('import-confirm').remove()">Cancelar</button>
-      <button class="btn" onclick="doImport(window._importOps,true)" style="border-color:var(--accent);color:var(--accent)">✓ Importar (omitir duplicados)</button>
-      <button class="btn green" onclick="doImport(window._importOps,false)">✓ Importar todos</button>
+      <button class="btn" onclick="doImport(window._importOps,true,document.getElementById('import-status').value)" style="border-color:var(--accent);color:var(--accent)">Importar (sin duplicados)</button>
+      <button class="btn green" onclick="doImport(window._importOps,false,document.getElementById('import-status').value)">Importar todos</button>
     </div>
   </div>`;
   window._importOps=ops;
   document.body.appendChild(modal);
 };
 
-window.doImport=async function(ops,skipDupes){
+window.doImport=async function(ops,skipDupes,forceStatus){
   document.getElementById('import-confirm')?.remove();
   toast('⏳ Importando...');
   const existingPhones=new Set();
@@ -1062,6 +1070,7 @@ window.doImport=async function(ops,skipDupes){
       const isDupe=phones.some(p=>existingPhones.has(norm(p)))||tgs.some(t=>t.length>2&&existingTgs.has(norm(t)));
       if(isDupe){dupes++;continue;}
     }
+    if(forceStatus)data.status=forceStatus;
     batch.push(push(ref(db,'contacts'),data).then(()=>done++));
   }
   await Promise.all(batch);
