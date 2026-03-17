@@ -806,9 +806,13 @@ window.openNewGroup=function(){
   newGroupStatuses=new Set(ALL_STATUSES);
   newGroupColor=GROUP_COLORS[0];
   document.getElementById('ng-name').value='';
-  // ALWAYS use hardcoded CATEGORIES for this dropdown — never trust Firebase userCategories here
-  document.getElementById('ng-category').innerHTML=Object.entries(CATEGORIES)
-    .sort((a,b)=>(a[1].order||0)-(b[1].order||0))
+  // Use hardcoded CATEGORIES + valid userCategories from Firebase
+  const baseCats=Object.entries(CATEGORIES).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+  const extraCats=Object.entries(userCategories)
+    .filter(([k,v])=>!CATEGORIES[k]&&v&&v.name&&!v.telefono&&!v.status&&!v.group&&!v.correo&&!v.nombre)
+    .sort((a,b)=>(a[1].order||99)-(b[1].order||99));
+  const allCats=[...baseCats,...extraCats];
+  document.getElementById('ng-category').innerHTML=allCats
     .map(([cid,cat])=>`<option value="${cid}">${cat.icon||'📁'} ${cat.name}</option>`).join('');
   renderGroupForm('ng');
   document.getElementById('new-group-modal').style.display='flex';
