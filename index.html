@@ -519,8 +519,8 @@ function renderSidebar(){
     grps.forEach(([gid,g])=>{
       const gc=allContacts.filter(c=>c.group===gid);
       const isCGB=g.type==='crunchyroll';
-      const venc=gc.filter(c=>isCGB?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length;
-      const pv=gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length;
+      const venc=gc.filter(c=>isCGB?(c.status==='Caída'||du(c.vencimiento)<0):(c.status!=='Cortado'&&(c.status==='Vencido'||du(c.vencimiento)<0))).length;
+      const pv=gc.filter(c=>{const d=du(c.vencimiento);return c.status!=='Cortado'&&d!==null&&d>=0&&d<=1;}).length;
       const totalAlerta=venc+pv; // vencidos + por vencer hoy/mañana
       const isActive=curGroup===gid&&curPage==='crm';
       const isDisenoGroup=g&&g.type==='diseno';
@@ -899,8 +899,8 @@ function renderAll(){
   const ag3=allGroups();const cg3=ag3[curGroup];const isCG=cg3&&cg3.type==='crunchyroll';
   const st={
     activos:gc.filter(c=>isCG?c.status==='En uso':c.status!=='Cortado').length,
-    vencidos:gc.filter(c=>isCG?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length,
-    porvencer:gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length,
+    vencidos:gc.filter(c=>isCG?(c.status==='Caída'||du(c.vencimiento)<0):(c.status!=='Cortado'&&(c.status==='Vencido'||du(c.vencimiento)<0))).length,
+    porvencer:gc.filter(c=>{const d=du(c.vencimiento);return c.status!=='Cortado'&&d!==null&&d>=0&&d<=1;}).length,
     cortados:gc.filter(c=>isCG?c.status==='Cortar perfiles':c.status==='Cortado').length,
     avisados:gc.filter(c=>c.status==='Aviso enviado').length
   };
@@ -947,10 +947,10 @@ function getFiltered(){
   if(fs)arr=arr.filter(c=>c.status===fs);
   else{
     if(curTab==='activos')arr=arr.filter(c=>isCrunchyGrp?c.status==='En uso':c.status!=='Cortado');
-    else if(curTab==='vencidos')arr=arr.filter(c=>isCrunchyGrp?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0));
-    else if(curTab==='porvencer')arr=arr.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;});
+    else if(curTab==='vencidos')arr=arr.filter(c=>isCrunchyGrp?(c.status==='Caída'||du(c.vencimiento)<0):(c.status!=='Cortado'&&(c.status==='Vencido'||du(c.vencimiento)<0)));
+    else if(curTab==='porvencer')arr=arr.filter(c=>{const d=du(c.vencimiento);return c.status!=='Cortado'&&d!==null&&d>=0&&d<=1;});
     else if(curTab==='cortados')arr=arr.filter(c=>isCrunchyGrp?c.status==='Cortar perfiles':c.status==='Cortado');
-    else if(curTab==='avisados')arr=arr.filter(c=>c.status==='Aviso enviado');
+    else if(curTab==='avisados')arr=arr.filter(c=>c.status==='Aviso enviado'&&c.status!=='Cortado');
   }
   if(search){
     const q=search.toLowerCase().replace(/[+\s\-().]/g,'');
