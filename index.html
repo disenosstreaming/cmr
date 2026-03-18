@@ -521,6 +521,7 @@ function renderSidebar(){
       const isCGB=g.type==='crunchyroll';
       const venc=gc.filter(c=>isCGB?(c.status==='Caída'||du(c.vencimiento)<0):(c.status==='Vencido'||du(c.vencimiento)<0)).length;
       const pv=gc.filter(c=>{const d=du(c.vencimiento);return d!==null&&d>=0&&d<=1;}).length;
+      const totalAlerta=venc+pv; // vencidos + por vencer hoy/mañana
       const isActive=curGroup===gid&&curPage==='crm';
       const isDisenoGroup=g&&g.type==='diseno';
       html+=`<div class="nav-item${isActive?' active':''}" 
@@ -533,8 +534,7 @@ function renderSidebar(){
         style="margin:2px .5rem;border-radius:var(--r);padding:7px 10px;cursor:grab;">
         <div style="background:${g.color||'#888'};width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
         <span style="flex:1;font-size:13px;margin-left:6px">${g.name}</span>
-        ${venc&&!isDisenoGroup?`<span class="nav-badge">${venc}</span>`:''}
-        ${pv&&!venc&&!isDisenoGroup?`<span class="nav-badge amber">${pv}</span>`:''}
+        ${totalAlerta&&!isDisenoGroup?`<span class="nav-badge" title="${venc} vencidos · ${pv} vencen hoy/mañana">${totalAlerta}</span>`:''}
         <button style="background:none;border:none;cursor:pointer;color:var(--text-hint);font-size:15px;padding:0 0 0 4px;line-height:1" onclick="event.stopPropagation();openGroupMenu('${gid}')">⋯</button>
       </div>`;
     });
