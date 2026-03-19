@@ -1011,13 +1011,16 @@ function renderTable(){
     const allPhones=getPhones(c);
   const isCrunchyContact=c.tipo==='crunchyroll';
     const phone0=allPhones[0]||'';
-    const phoneHtml=allPhones.length
-      ?`<div class="copy-cell" data-copy="${phone0.replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s">
-          <span class="tel-link">${phone0}</span>
-          ${allPhones.length>1?`<span style="font-size:10px;color:var(--text-hint)">+${allPhones.length-1}</span>`:''}
-          <span style="font-size:11px;color:var(--accent);flex-shrink:0">📋</span>
-        </div>`
-      :'—';
+    const phoneHtml=allPhones.length===0?'—'
+      :allPhones.length===1
+        ?`<div class="copy-cell" data-copy="${phone0.replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s">
+            <span class="tel-link">${phone0}</span>
+            <span style="font-size:11px;color:var(--accent);flex-shrink:0">📋</span>
+          </div>`
+        :`<div onclick="openPhonesPopup(event,${JSON.stringify(allPhones).replace(/"/g,'&quot;')})" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s" onmouseenter="this.style.borderColor='var(--accent)';this.style.background='var(--accent-light)'" onmouseleave="this.style.borderColor='transparent';this.style.background='none'">
+            <span class="tel-link">${phone0}</span>
+            <span style="font-size:10px;color:var(--accent);font-weight:500">+${allPhones.length-1} 📋</span>
+          </div>`;
     const tg0=getTelegrams(c)[0]||'';
     const tgHtml=tg0
       ?`<div class="copy-cell" data-copy="${tg0.replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s;max-width:150px">
@@ -1109,6 +1112,38 @@ function showCopyTooltip(event,text,el){
   },100);
 }
 function copyText(text,btn){showCopyTooltip(event,text,btn);}
+
+// MULTI-PHONE POPUP
+window.openPhonesPopup=function(event,phones){
+  event.stopPropagation();
+  const ex=document.getElementById('phones-popup');if(ex)ex.remove();
+  const tip=document.createElement('div');
+  tip.id='phones-popup';
+  const rect=event.currentTarget.getBoundingClientRect();
+  tip.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.bottom+6}px;background:var(--surface);border:2px solid var(--accent);border-radius:10px;padding:14px;z-index:9999;box-shadow:0 4px 24px rgba(0,0,0,.3);min-width:260px;`;
+  tip.innerHTML=`
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">📞 Números (${phones.length})</div>
+    ${phones.map(p=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--info);flex:1">${p}</span>
+        <button onclick="navigator.clipboard.writeText('${p}').then(()=>{this.textContent='✓';this.style.background='var(--accent)';this.style.color='#fff';setTimeout(()=>{this.textContent='📋 Copiar';this.style.background='';this.style.color='';},1500)})" 
+          style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:500;white-space:nowrap">📋 Copiar</button>
+      </div>`).join('')}
+    <div style="text-align:right;margin-top:4px">
+      <button onclick="document.getElementById('phones-popup')?.remove()" style="padding:4px 12px;background:none;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;color:var(--text-muted);font-family:inherit">Cerrar</button>
+    </div>`;
+  document.body.appendChild(tip);
+  // Adjust if off-screen
+  requestAnimationFrame(()=>{
+    const r=tip.getBoundingClientRect();
+    if(r.right>window.innerWidth)tip.style.left=(window.innerWidth-r.width-10)+'px';
+    if(r.bottom>window.innerHeight)tip.style.top=(rect.top-r.height-6)+'px';
+  });
+  setTimeout(()=>{
+    const h=(e)=>{if(!tip.contains(e.target)){tip.remove();document.removeEventListener('click',h);}};
+    document.addEventListener('click',h);
+  },100);
+};
 function copyConfirm(btn){
   const orig=btn.textContent;
   btn.textContent='✓';btn.style.background='var(--accent)';btn.style.color='#fff';btn.style.borderColor='var(--accent)';
