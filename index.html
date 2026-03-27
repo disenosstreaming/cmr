@@ -986,6 +986,7 @@ function renderTable(){
     <th>📞 Teléfonos</th>
     <th onclick="doSort('vencimiento')" style="cursor:pointer">📅 Vencimiento ${sf==='vencimiento'?sd===1?'↑':'↓':''}</th>
     <th>✈️ Telegram</th>
+    <th onclick="doSort('correo')" style="cursor:pointer">📧 Correo ${sf==='correo'?sd===1?'↑':'↓':''}</th>
     <th onclick="doSort('status')" style="cursor:pointer">🔵 Estado ${sf==='status'?sd===1?'↑':'↓':''}</th>
     <th>⚙️ Acciones</th>`;}
   const all=getFiltered();
@@ -993,7 +994,7 @@ function renderTable(){
   if(page>tp)page=1;
   const arr=all.slice((page-1)*PS,page*PS);
   const tbody=document.getElementById('tbody');
-  if(!arr.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty">No hay contactos en esta sección</div></td></tr>`;document.getElementById('pagination').innerHTML='';return;}
+  if(!arr.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty">No hay contactos en esta sección</div></td></tr>`;document.getElementById('pagination').innerHTML='';return;}
   tbody.innerHTML=arr.map(c=>{
     const hasUp=updates[c._id]&&Object.keys(updates[c._id]).length>0;
     const emoji=SE[c.status]||'';
@@ -1051,6 +1052,12 @@ function renderTable(){
       <td>${phoneHtml}</td>
       <td class="${dc(c.vencimiento)}" onclick="openQuickRenew('${c._id}',event)" style="cursor:pointer;white-space:nowrap" title="Clic para renovar">${fd(c.vencimiento)}<span style="font-size:11px">${ds(c.vencimiento)}</span> <span style="font-size:10px;opacity:.4">✏️</span></td>
       <td>${tgHtml}</td>
+      <td style="max-width:180px">
+        ${c.correo?`<div class="copy-cell" data-copy="${c.correo.replace(/"/g,'&quot;')}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid transparent;transition:all .15s;max-width:170px">
+          <span style="font-size:12px;color:var(--info);overflow:hidden;text-overflow:ellipsis">${c.correo}</span>
+          <span style="font-size:11px;color:var(--accent);flex-shrink:0">📋</span>
+        </div>`:'—'}
+      </td>
       <td><span class="pill ${SC[c.status]||''}" onclick="openMove('${c._id}')">${SE[c.status]||''} ${c.status||'—'}</span></td>
       <td><div class="actions">
         ${(c.status==='Activado'&&(du(c.vencimiento)!==null&&du(c.vencimiento)<=1))||(c.status==='Vencido'&&c.status!=='Aviso enviado')||(c.status==='Activado'&&du(c.vencimiento)<0)?`<button class="btn" style="font-size:11px;padding:3px 8px;color:#1a5c38;border-color:#1a6b47" onclick="sendAviso('${c._id}')">📢 Aviso</button>`:''}
@@ -1683,6 +1690,8 @@ window.openAdd=function(){
   buildRenewalBox('');
   document.getElementById('add-rata-alert').style.display='none';
   document.getElementById('f-status').innerHTML=getGroupStatuses().map(s=>`<option>${s}</option>`).join('');
+  document.getElementById('f-correo').value='';
+  document.getElementById('f-password').value='';
   document.getElementById('add-modal').style.display='flex';
 };
 window.closeAdd=function(){document.getElementById('add-modal').style.display='none';document.getElementById('add-form').reset();};
@@ -1693,6 +1702,8 @@ window.saveContact=async function(){
   await push(ref(db,'contacts'),{
     nombre,telefono:phones[0],telefono2:phones[1]||'',telefonos:phones.slice(2),
     telegram:getDynValues('f-telegrams')[0]||'',telegrams:getDynValues('f-telegrams').slice(1),
+    correo:document.getElementById('f-correo').value.trim(),
+    password:document.getElementById('f-password').value.trim(),
     vencimiento:renewalDate,status:document.getElementById('f-status').value,
     tipo:document.getElementById('f-tipo').value,notas:document.getElementById('f-notas').value.trim(),
     group:curGroup,createdAt:new Date().toISOString(),createdBy:cu.email
@@ -1709,12 +1720,19 @@ window.openEdit=function(id){
   const activeBox=editBox||origBox;
   document.getElementById('e-nombre').value=c.nombre||'';
   const crunchyFields=document.getElementById('e-crunchy-fields');
+  const normalFields=document.getElementById('e-normal-fields');
   if(c.tipo==='crunchyroll'){
     crunchyFields.style.display='block';
+    normalFields.style.display='none';
     document.getElementById('e-correo').value=c.correo||'';
     document.getElementById('e-password').value=c.password||'';
     document.getElementById('e-pin').value=c.pin||'';
-  }else crunchyFields.style.display='none';
+  }else{
+    crunchyFields.style.display='none';
+    normalFields.style.display='block';
+    document.getElementById('e-correo-normal').value=c.correo||'';
+    document.getElementById('e-password-normal').value=c.password||'';
+  }
   buildDynFields('e-phones',getPhones(c),'+51 9XX XXX XXX');
   buildDynFields('e-telegrams',getTelegrams(c),'@usuario');
   // Build renewal in edit modal specifically
@@ -1752,13 +1770,20 @@ window.saveEdit=async function(){
   if(!nombre||!phones.length){toast('Nombre y teléfono obligatorios');return;}
   const c=contacts[editId];const newStatus=document.getElementById('e-status').value;
   const newGroup=document.getElementById('e-group').value;
+  const isCrunchy=contacts[editId]?.tipo==='crunchyroll';
+  const correoVal=isCrunchy
+    ?(document.getElementById('e-correo')?.value.trim()||'')
+    :(document.getElementById('e-correo-normal')?.value.trim()||'');
+  const passwordVal=isCrunchy
+    ?(document.getElementById('e-password')?.value.trim()||'')
+    :(document.getElementById('e-password-normal')?.value.trim()||'');
   const upd={nombre,telefono:phones[0],telefono2:phones[1]||'',telefonos:phones.slice(2),
     telegram:getDynValues('e-telegrams')[0]||'',telegrams:getDynValues('e-telegrams').slice(1),
     vencimiento:renewalDate,status:newStatus,tipo:document.getElementById('e-tipo').value,
     referidor:document.getElementById('e-referidor').value.trim(),
     notas:document.getElementById('e-notas').value.trim(),group:newGroup,
-    correo:document.getElementById('e-correo')?document.getElementById('e-correo').value.trim():(contacts[editId]?.correo||''),
-    password:document.getElementById('e-password')?document.getElementById('e-password').value.trim():(contacts[editId]?.password||''),
+    correo:correoVal,
+    password:passwordVal,
     pin:document.getElementById('e-pin')?document.getElementById('e-pin').value.trim():(contacts[editId]?.pin||''),
     updatedAt:new Date().toISOString(),updatedBy:cu.email};
   if(c&&c.status&&c.status!==newStatus){
@@ -1844,7 +1869,10 @@ function renderPanel(){
   const hist=c.statusHistory?Object.values(c.statusHistory).sort((a,b)=>b.at>a.at?1:-1):[];
   const ag=allGroups();const g=ag[c.group];
   document.getElementById('panel-info').innerHTML=`
-    ${isCrunchyContact&&c.correo?`<div class="panel-row"><span class="panel-label">Correo</span><div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:var(--info)">${c.correo}</span><button onclick="copyText('${c.correo}',this)" style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text-muted)">Copiar</button></div></div>`:''}${isCrunchyContact&&c.password?`<div class="panel-row"><span class="panel-label">Contraseña</span><div style="display:flex;align-items:center;gap:6px"><span style="font-family:'DM Mono',monospace;font-size:12px">${c.password}</span><button onclick="copyText('${c.password}',this)" style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text-muted)">Copiar</button></div></div>`:''}${isCrunchyContact&&c.pin?`<div class="panel-row"><span class="panel-label">PIN</span><span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--warn);font-weight:500">${c.pin}</span></div>`:''}${allPhones.map((p,i)=>`<div class="panel-row"><span class="panel-label">${i===0?'Teléfono':'Tel. '+(i+1)}</span><a href="tel:${p}" class="tel-link">${p}</a></div>`).join('')}
+    ${c.correo?`<div class="panel-row"><span class="panel-label">Correo</span><div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end"><span style="font-size:12px;color:var(--info);word-break:break-all;text-align:right">${c.correo}</span><button onclick="copyText('${c.correo.replace(/'/g,"\\'")}',this)" style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text-muted);flex-shrink:0">Copiar</button></div></div>`:''}
+    ${c.password?`<div class="panel-row"><span class="panel-label">Contraseña</span><div style="display:flex;align-items:center;gap:6px"><span style="font-family:'DM Mono',monospace;font-size:12px">${c.password}</span><button onclick="copyText('${c.password.replace(/'/g,"\\'")}',this)" style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text-muted)">Copiar</button></div></div>`:''}
+    ${c.pin?`<div class="panel-row"><span class="panel-label">PIN</span><span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--warn);font-weight:500">${c.pin}</span></div>`:''}
+    ${allPhones.map((p,i)=>`<div class="panel-row"><span class="panel-label">${i===0?'Teléfono':'Tel. '+(i+1)}</span><a href="tel:${p}" class="tel-link">${p}</a></div>`).join('')}
     ${getTelegrams(c).map((t,i)=>`<div class="panel-row"><span class="panel-label">${i===0?'Telegram':'Telegram '+(i+1)}</span><span style="color:var(--purple);font-size:13px">${t}</span></div>`).join('')}
     <div class="panel-row" style="flex-direction:column;align-items:flex-start;gap:8px">
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
@@ -2425,6 +2453,8 @@ if(saved){
         <div class="form-group full"><label>Nombre *</label><input id="f-nombre" required oninput="checkRataAlert()"></div>
         <div class="form-group full"><label>Teléfonos *</label><div id="f-phones"></div><button type="button" class="dyn-add-btn" onclick="addDynField('f-phones','+51 9XX XXX XXX')">+ Agregar número</button></div>
         <div class="form-group full"><label>Telegrams</label><div id="f-telegrams"></div><button type="button" class="dyn-add-btn" onclick="addDynField('f-telegrams','@usuario')">+ Agregar telegram</button></div>
+        <div class="form-group full"><label>Correo electrónico</label><input id="f-correo" placeholder="correo@ejemplo.com" type="email"></div>
+        <div class="form-group"><label>Contraseña</label><input id="f-password" placeholder="contraseña"></div>
         <div class="form-group full" id="renewal-box"></div>
         <div class="form-group"><label>Estado</label><select id="f-status"></select></div>
         <div class="form-group"><label>Tipo</label><select id="f-tipo"><option value="">— Sin tipo —</option><option>VIP</option><option>Sospechoso</option><option>Rata</option><option>Pendiente</option></select></div>
@@ -2449,6 +2479,13 @@ if(saved){
           <div class="form-group full"><label>Correo electrónico</label><input id="e-correo" placeholder="cuenta@outlook.com"></div>
           <div class="form-group"><label>Contraseña</label><input id="e-password" placeholder="contraseña"></div>
           <div class="form-group"><label>PIN</label><input id="e-pin" placeholder="0000"></div>
+        </div>
+      </div>
+      <!-- Correo y contraseña para contactos normales -->
+      <div id="e-normal-fields" style="grid-column:1/-1">
+        <div class="form-grid" style="margin-bottom:10px">
+          <div class="form-group full"><label>Correo electrónico</label><input id="e-correo-normal" placeholder="correo@ejemplo.com" type="email"></div>
+          <div class="form-group"><label>Contraseña</label><input id="e-password-normal" placeholder="contraseña"></div>
         </div>
       </div>
       <div class="form-group full"><label>Teléfonos *</label><div id="e-phones"></div><button type="button" class="dyn-add-btn" onclick="addDynField('e-phones','+51 9XX XXX XXX')">+ Agregar número</button></div>
