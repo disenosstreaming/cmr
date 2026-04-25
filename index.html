@@ -1104,6 +1104,28 @@ tbody td{
   padding-right:12px;
 }
 
+
+/* ===== UX v4.1 · quitar barra negra en teléfonos ===== */
+.crm-table th:nth-child(3),
+.crm-table td:nth-child(3){
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.crm-table td:nth-child(3) .data-cell{
+  background:transparent !important;
+  justify-content:flex-start;
+}
+.crm-table td:nth-child(3) .copy-chip,
+.crm-table td:nth-child(3) .copy-cell.copy-chip{
+  background:transparent !important;
+  border-color:color-mix(in srgb,var(--accent) 28%, var(--border)) !important;
+  box-shadow:none !important;
+}
+.crm-table td:nth-child(3) .copy-chip:hover,
+.crm-table td:nth-child(3) .copy-cell.copy-chip:hover{
+  background:color-mix(in srgb,var(--accent-light) 32%, transparent) !important;
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
