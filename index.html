@@ -1126,6 +1126,234 @@ tbody td{
   background:color-mix(in srgb,var(--accent-light) 32%, transparent) !important;
 }
 
+
+/* ===== UX v4.2 · teléfonos sin barra/píldora ===== */
+.crm-table td:nth-child(3) .copy-chip,
+.crm-table td:nth-child(3) .copy-cell.copy-chip{
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  padding:0 !important;
+  min-height:auto !important;
+  border-radius:0 !important;
+}
+.crm-table td:nth-child(3) .copy-chip:hover,
+.crm-table td:nth-child(3) .copy-cell.copy-chip:hover{
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+.phone-plain{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  max-width:100%;
+  cursor:pointer;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  padding:0 !important;
+}
+.phone-plain .phone-number{
+  font-family:'DM Mono',monospace;
+  font-size:14px;
+  font-weight:600;
+  color:var(--text);
+  letter-spacing:.01em;
+  white-space:nowrap;
+}
+.phone-plain:hover .phone-number{
+  color:var(--accent);
+}
+.phone-more{
+  font-size:11px;
+  font-weight:600;
+  color:var(--text-muted);
+  white-space:nowrap;
+}
+
+
+/* ===== UX v4.3 · header superior compacto ===== */
+.main{
+  padding:12px !important;
+}
+#sticky-header,
+#disenos-sticky{
+  padding:10px !important;
+  margin-bottom:10px !important;
+  border-radius:18px !important;
+}
+#sticky-header .page-title,
+#disenos-sticky .page-title{
+  padding-top:0 !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  margin-bottom:8px !important;
+  font-size:18px !important;
+  gap:8px !important;
+}
+#sticky-header .page-title #page-dot{
+  width:9px !important;
+  height:9px !important;
+}
+.alert-banner{
+  padding:6px 10px !important;
+  margin-bottom:8px !important;
+  border-radius:12px !important;
+  font-size:12px !important;
+}
+.stats{
+  gap:8px !important;
+  margin-bottom:8px !important;
+  grid-template-columns:repeat(5,minmax(110px,1fr)) !important;
+}
+.stat{
+  padding:9px 10px !important;
+  border-radius:14px !important;
+  min-height:72px;
+}
+.stat-label{
+  font-size:10px !important;
+  margin-bottom:2px !important;
+  line-height:1.15 !important;
+}
+.stat-val{
+  font-size:18px !important;
+  line-height:1.05 !important;
+}
+.tabs{
+  padding:3px !important;
+  margin-bottom:8px !important;
+  border-radius:16px !important;
+}
+.tab{
+  padding:6px 10px !important;
+  font-size:12px !important;
+}
+.toolbar{
+  padding:8px !important;
+  margin-bottom:0 !important;
+  gap:6px !important;
+  border-radius:16px !important;
+}
+.toolbar .btn,
+.toolbar input[type=text],
+.toolbar select{
+  min-height:34px;
+}
+.toolbar input[type=text]{
+  width:220px;
+}
+.bulk-bar{
+  margin-top:8px !important;
+  margin-bottom:0 !important;
+  padding:7px 10px !important;
+  border-radius:12px !important;
+}
+@media (max-width: 1100px){
+  .stats{
+    grid-template-columns:repeat(5,minmax(96px,1fr)) !important;
+  }
+  .stat{
+    min-height:64px;
+    padding:8px !important;
+  }
+  .stat-val{
+    font-size:16px !important;
+  }
+}
+
+
+/* ===== UX v4.4 · mejora de contraste en tema negro ===== */
+[data-theme="dark"] tbody tr:hover td{
+  background:#262521 !important;
+}
+[data-theme="dark"] tbody tr.sel-row td{
+  background:#143624 !important;
+}
+[data-theme="dark"] tbody tr:hover .name-text,
+[data-theme="dark"] tbody tr:hover .cell-primary,
+[data-theme="dark"] tbody tr:hover .phone-number,
+[data-theme="dark"] tbody tr:hover .date-primary,
+[data-theme="dark"] tbody tr:hover .email-text,
+[data-theme="dark"] tbody tr:hover .tg-text,
+[data-theme="dark"] tbody tr:hover .mono-data,
+[data-theme="dark"] tbody tr:hover .tel-link,
+[data-theme="dark"] tbody tr:hover .copy-cell,
+[data-theme="dark"] tbody tr:hover .open-detail{
+  color:#f7f5ef !important;
+}
+[data-theme="dark"] tbody tr:hover .date-secondary,
+[data-theme="dark"] tbody tr:hover .cell-meta,
+[data-theme="dark"] tbody tr:hover .phone-more,
+[data-theme="dark"] tbody tr:hover .row-flags > span:first-child{
+  color:#d4d0c8 !important;
+}
+[data-theme="dark"] .copy-chip{
+  background:#111816 !important;
+  border-color:#244c3a !important;
+}
+[data-theme="dark"] .copy-chip:hover{
+  background:#163122 !important;
+  border-color:#34b87d !important;
+}
+[data-theme="dark"] .phone-plain:hover .phone-number,
+[data-theme="dark"] .copy-cell:hover .phone-number,
+[data-theme="dark"] .copy-cell:hover .cell-primary{
+  color:#7be9b3 !important;
+}
+[data-theme="dark"] .pill{
+  border-width:1px;
+  border-style:solid;
+}
+[data-theme="dark"] .p-activado{border-color:#2b7f59;}
+[data-theme="dark"] .p-cobrar{border-color:#9a5f1f;}
+[data-theme="dark"] .p-vencido{border-color:#9a3429;}
+[data-theme="dark"] .p-cortado{border-color:#505048;}
+[data-theme="dark"] .p-vip{border-color:#5e49a9;}
+[data-theme="dark"] .p-sospechoso{border-color:#7c4a61;}
+[data-theme="dark"] .p-pendiente{border-color:#366982;}
+[data-theme="dark"] .p-rata{border-color:#8f4038;}
+[data-theme="dark"] .p-aviso{background:#123221 !important;color:#dff8ea !important;border-color:#2d8a5e !important;}
+[data-theme="dark"] .p-referido{background:#152033 !important;color:#dbe7ff !important;border-color:#4b69a8 !important;}
+[data-theme="dark"] .p-noesperar{background:#34210f !important;color:#ffd6b3 !important;border-color:#a85b21 !important;}
+[data-theme="dark"] thead th{
+  background:#12110f !important;
+  color:#bdb8ae !important;
+}
+[data-theme="dark"] thead th:hover{
+  color:#f3f1ea !important;
+}
+[data-theme="dark"] .stat,
+[data-theme="dark"] .toolbar,
+[data-theme="dark"] .tabs,
+[data-theme="dark"] #sticky-header,
+[data-theme="dark"] #disenos-sticky{
+  border-color:#302e2a !important;
+}
+[data-theme="dark"] .tab{
+  color:#b9b5ad !important;
+}
+[data-theme="dark"] .tab:hover:not(.active){
+  color:#f4f2ec !important;
+  background:#23221f !important;
+}
+[data-theme="dark"] .btn{
+  border-color:#3a3835;
+}
+[data-theme="dark"] .btn:hover{
+  background:#262521;
+}
+[data-theme="dark"] .toolbar input[type=text],
+[data-theme="dark"] .toolbar select{
+  background:#161512 !important;
+  border-color:#34322f !important;
+  color:#f0eee8 !important;
+}
+[data-theme="dark"] .toolbar input[type=text]::placeholder{
+  color:#97938a;
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -2189,8 +2417,8 @@ function renderTable(){
     const phoneHtml=allPhones.length===0
       ? `<span class="muted-dash">—</span>`
       : allPhones.length===1
-        ? `<div class="data-cell"><div class="copy-cell copy-chip mono-data" data-copy="${phone0.replace(/"/g,'&quot;')}"><span class="cell-primary">${phone0}</span></div></div>`
-        : `<div class="data-cell"><div onclick="openPhonesPopup(event,${JSON.stringify(allPhones).replace(/"/g,'&quot;')})" class="copy-chip mono-data"><span class="cell-primary">${phone0}</span><span class="cell-meta">+${allPhones.length-1} más</span></div></div>`;
+        ? `<div class="data-cell"><div class="copy-cell phone-plain" data-copy="${phone0.replace(/"/g,'&quot;')}" title="Clic para copiar"><span class="phone-number">${phone0}</span></div></div>`
+        : `<div class="data-cell"><div onclick="openPhonesPopup(event,${JSON.stringify(allPhones).replace(/"/g,'&quot;')})" class="phone-plain" title="Ver y copiar teléfonos"><span class="phone-number">${phone0}</span><span class="phone-more">+${allPhones.length-1} más</span></div></div>`;
 
     const allTelegrams=getTelegrams(c);
     const tg0=allTelegrams[0]||'';
