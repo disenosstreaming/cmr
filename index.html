@@ -1443,6 +1443,10 @@ function flattenSearchValue(value){
 function normalizeSearchText(v){
   return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[+\-.()]/g,' ').replace(/\s+/g,' ').trim();
 }
+function normalizePhone(v){
+  // Strips everything except digits for phone comparison
+  return String(v||'').replace(/\D/g,'');
+}
 function scoreMatch(text,q){
   const t=normalizeSearchText(text);
   const nq=normalizeSearchText(q);
@@ -1450,8 +1454,13 @@ function scoreMatch(text,q){
   if(t===nq)return 100;
   if(t.startsWith(nq))return 80;
   if(t.includes(nq))return 60;
-  const pieces=nq.split(' ').filter(Boolean);
-  if(pieces.length&&pieces.every(p=>t.includes(p)))return 45;
+  // Only split into pieces if query has multiple words AND is NOT purely numeric
+  // This prevents "956 202 430" from matching fragments scattered across different fields
+  const isNumericQuery=/^\d[\d\s]+$/.test(q.trim());
+  if(!isNumericQuery){
+    const pieces=nq.split(' ').filter(Boolean);
+    if(pieces.length>1&&pieces.every(p=>t.includes(p)))return 45;
+  }
   return 0;
 }
 function getEntitySearchText(entity,extra=''){
@@ -1461,6 +1470,15 @@ function getEntitySearchText(entity,extra=''){
     getPhones(entity).join(' '),
     getTelegrams(entity).join(' ')
   ].join(' ');
+}
+function phoneMatchesQuery(entity,q){
+  // Dedicated phone search: compare digits-only query against digits-only phones
+  const qDigits=normalizePhone(q);
+  if(qDigits.length<6)return false; // too short to be a meaningful phone search
+  return getPhones(entity).some(p=>{
+    const pd=normalizePhone(p);
+    return pd.includes(qDigits)||pd.endsWith(qDigits)||(qDigits.length>=9&&pd.includes(qDigits.slice(-9)));
+  });
 }
 function renderGlobalSearch(){
   const input=document.getElementById('global-search');
@@ -1480,7 +1498,8 @@ function renderGlobalSearch(){
     const catId=catForGroup(g);
     const cat=cats[catId]||CATEGORIES[catId]||{};
     const extra=`${g.name||''} ${cat.name||''} ${cat.icon||''}`;
-    const sc=scoreMatch(getEntitySearchText(c,extra),q);
+    let sc=scoreMatch(getEntitySearchText(c,extra),q);
+    if(!sc&&phoneMatchesQuery(c,q))sc=70;
     if(sc){
       contactResults.push({id,c,g,cat,catId,score:sc});
     }
