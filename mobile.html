@@ -116,6 +116,7 @@ main{padding:4px 14px 0}
 .b-renew:active,.btn:active,.mbtn:active,.chip:active{transform:scale(.97)}
 .ib{width:46px;height:46px;border-radius:13px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center;font-size:19px;text-decoration:none;flex:none}
 .ib.wa{background:var(--wa-light);border-color:transparent;color:var(--wa)}
+.ib.wa.wa-sent,.sm.wa.wa-sent,.q.wa.wa-sent{background:#f59e0b!important;color:#fff!important;border-color:#f59e0b!important}
 .pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;flex:none;border:1px solid transparent}
 .p-activado{background:var(--accent-light);color:var(--accent)}
 .p-cobrar{background:var(--warn-light);color:var(--warn)}
@@ -425,6 +426,35 @@ function waNumber(p){
   if(d.length===9&&d[0]==='9')d=DEFAULT_COUNTRY+d;
   return d;
 }
+
+// ═══ AVISO WHATSAPP POR 24 HORAS ═══
+// Se guarda por número en este dispositivo/navegador.
+const WA_SENT_KEY='crm-wa-sent-v1';
+const WA_SENT_TTL=24*60*60*1000;
+function waSentRead(){
+  try{return JSON.parse(localStorage.getItem(WA_SENT_KEY)||'{}')||{};}catch{return {};}
+}
+function waSentWrite(v){try{localStorage.setItem(WA_SENT_KEY,JSON.stringify(v));}catch{}}
+function waSentAt(phone){
+  const n=waNumber(phone);if(!n)return 0;
+  const m=waSentRead(),ts=Number(m[n]||0);
+  if(!ts)return 0;
+  if(Date.now()-ts>=WA_SENT_TTL){delete m[n];waSentWrite(m);return 0;}
+  return ts;
+}
+function waWasSent(phone){return !!waSentAt(phone);}
+function waSentTitle(phone){
+  const ts=waSentAt(phone);if(!ts)return'WhatsApp';
+  const mins=Math.max(1,Math.floor((Date.now()-ts)/60000));
+  if(mins<60)return`WhatsApp · avisado hace ${mins} min`;
+  const hrs=Math.floor(mins/60);return`WhatsApp · avisado hace ${hrs} h`;
+}
+function markWaSent(phone,el){
+  const n=waNumber(phone);if(!n)return;
+  const m=waSentRead();m[n]=Date.now();waSentWrite(m);
+  if(el){el.classList.add('wa-sent');el.setAttribute('aria-label','WhatsApp · avisado en las últimas 24 horas');el.title='Avisado ahora · se mantendrá marcado por 24 horas';}
+  toast('✓ Marcado como avisado por 24 horas');
+}
 function waLink(c,phone){
   const n=waNumber(phone||getPhones(c)[0]||'');
   if(!n)return'';
@@ -629,7 +659,7 @@ function cardHTML(c,showGroup){
     </div>
     <div class="card-actions">
       <button class="b-renew" data-act="renew" data-id="${esc(c._id)}">📅 Renovar</button>
-      ${wa?`<a class="ib wa" href="${esc(wa)}" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>`:''}
+      ${wa?`<a class="ib wa${waWasSent(phones[0])?' wa-sent':''}" href="${esc(wa)}" target="_blank" rel="noopener" data-act="waopen" data-phone="${esc(phones[0])}" aria-label="${esc(waSentTitle(phones[0]))}" title="${esc(waSentTitle(phones[0]))}">💬</a>`:''}
       <button class="ib" data-act="more" data-id="${esc(c._id)}" aria-label="Más">⋯</button>
     </div>
   </article>`;
@@ -748,7 +778,7 @@ function renderDetail(){
     </div>
     <div class="d-quick">
       <button class="q main" data-act="renew" data-id="${esc(detailId)}"><span class="ic">📅</span>Renovar</button>
-      ${wa?`<a class="q wa" href="${esc(wa)}" target="_blank" rel="noopener"><span class="ic">💬</span>WhatsApp</a>`:`<span class="q" style="opacity:.4"><span class="ic">💬</span>WhatsApp</span>`}
+      ${wa?`<a class="q wa${waWasSent(phones[0])?' wa-sent':''}" href="${esc(wa)}" target="_blank" rel="noopener" data-act="waopen" data-phone="${esc(phones[0])}" title="${esc(waSentTitle(phones[0]))}"><span class="ic">💬</span>WhatsApp</a>`:`<span class="q" style="opacity:.4"><span class="ic">💬</span>WhatsApp</span>`}
       ${phones.length?`<a class="q" href="tel:${esc(phones[0])}"><span class="ic">📞</span>Llamar</a>`:`<span class="q" style="opacity:.4"><span class="ic">📞</span>Llamar</span>`}
       <button class="q" data-act="edit" data-id="${esc(detailId)}"><span class="ic">✏️</span>Editar</button>
     </div>
@@ -756,7 +786,7 @@ function renderDetail(){
       <span class="acts"><button class="sm" data-act="renew" data-id="${esc(detailId)}" aria-label="Cambiar fecha">✏️</button></span></div>
     <div class="row"><span class="k">Estado</span><span class="v">${pillHTML(c.status,cr)}</span>
       <span class="acts"><button class="btn" style="height:40px;font-size:13px;padding:0 12px" data-act="status" data-id="${esc(detailId)}">Cambiar</button></span></div>
-    ${phones.map((p,i)=>copyRow(i?`Tel. ${i+1}`:'Teléfono',p,true,waLink(c,p)?`<a class="sm wa" href="${esc(waLink(c,p))}" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>`:'')).join('')}
+    ${phones.map((p,i)=>copyRow(i?`Tel. ${i+1}`:'Teléfono',p,true,waLink(c,p)?`<a class="sm wa${waWasSent(p)?' wa-sent':''}" href="${esc(waLink(c,p))}" target="_blank" rel="noopener" data-act="waopen" data-phone="${esc(p)}" aria-label="${esc(waSentTitle(p))}" title="${esc(waSentTitle(p))}">💬</a>`:'')).join('')}
     ${tgs.map((t,i)=>copyRow(i?`Telegram ${i+1}`:'Telegram',t,true)).join('')}
     ${c.correo?copyRow('Correo',c.correo,false):''}
     ${c.password?copyRow('Contraseña',c.password,true):''}
@@ -997,6 +1027,7 @@ const A={
   undoaviso:(id)=>safe(undoAviso)(id),
   del:(id)=>safe(delContact)(id),
   copy:(id,el)=>copyText(el.dataset.v),
+  waopen:(id,el)=>markWaSent(el.dataset.phone,el),
   add:()=>{view==='rata'?openBL():openForm(null);},
   addnote:()=>safe(addNote)(),
   addrow:(id,el)=>{const t=el.dataset.t;const box=$(t==='phones'?'f-phones':t==='tgs'?'f-tgs':t);const kind=(t==='phones'||t==='bl-phones')?'tel':'tg';box.insertAdjacentHTML('beforeend',dynRow(kind,''));box.lastElementChild.querySelector('input').focus();},
@@ -1029,6 +1060,13 @@ $('q').addEventListener('input',e=>{
   search=e.target.value;$('searchBox').classList.toggle('has',!!search);shown=PAGE;
   clearTimeout(sT);sT=setTimeout(()=>{renderChips();renderList();},120);
 });
+
+// Actualiza los botones cuando vence una marca de 24 h.
+setInterval(()=>{
+  const before=waSentRead();let changed=false;const now=Date.now();
+  Object.entries(before).forEach(([n,ts])=>{if(now-Number(ts)>=WA_SENT_TTL){delete before[n];changed=true;}});
+  if(changed){waSentWrite(before);scheduleRender();}
+},60000);
 
 // ═══ TEMA ═══
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);lsSet('crm-theme',t);}
