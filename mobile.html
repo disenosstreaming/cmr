@@ -426,11 +426,28 @@ function waNumber(p){
   return d;
 }
 function waLink(c,phone){
-  const n=waNumber(phone||getPhones(c)[0]||'');if(!n)return'';
+  const n=waNumber(phone||getPhones(c)[0]||'');
+  if(!n)return'';
+
   const first=(c.nombre||'').trim().split(/\s+/)[0]||'';
-  const d=du(c.vencimiento);let msg='';
-  if(d!==null&&d<0)msg=`Hola ${first}, tu suscripción venció el ${fd(c.vencimiento)}. ¿Deseas renovarla? 🙌`;
-  else if(d!==null&&d<=3)msg=`Hola ${first}, te recuerdo que tu suscripción ${d===0?'vence hoy':d===1?'vence mañana':'vence el '+fd(c.vencimiento)}. ¿Renovamos? 🙌`;
+  const d=du(c.vencimiento);
+  let msg='';
+
+  if(d!==null&&d<0){
+    msg=`Hola ${first}, tu suscripción venció el ${fd(c.vencimiento)}. ¿Deseas renovarla? 🙌`;
+  }else if(d!==null&&d<=3){
+    msg=`Hola ${first}, te recuerdo que tu suscripción ${d===0?'vence hoy':d===1?'vence mañana':'vence el '+fd(c.vencimiento)}. ¿Renovamos? 🙌`;
+  }
+
+  // Android: fuerza la apertura de WhatsApp Business (paquete com.whatsapp.w4b).
+  // Si Business no está instalado, lleva a Google Play en vez de abrir WhatsApp normal.
+  if(/Android/i.test(navigator.userAgent)){
+    const text=msg?`&text=${encodeURIComponent(msg)}`:'';
+    const playStore=encodeURIComponent('https://play.google.com/store/apps/details?id=com.whatsapp.w4b');
+    return `intent://send?phone=${n}${text}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${playStore};end`;
+  }
+
+  // iPhone / iPad / otros: la web no puede elegir de forma fiable entre WhatsApp y WhatsApp Business.
   return `https://wa.me/${n}${msg?'?text='+encodeURIComponent(msg):''}`;
 }
 let toastT=null;
