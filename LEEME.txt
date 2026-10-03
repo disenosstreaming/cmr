@@ -1,0 +1,22 @@
+ARCHIVOS PARA GITHUB PAGES - CRM PWA
+
+1. En tu repositorio disenosstreaming/cmr, reemplaza estos 3 archivos en la raíz:
+   - mobile.html
+   - manifest.json
+   - sw.js
+
+2. NO borres estos iconos que ya existen:
+   - icon-192.png
+   - icon-512.png
+   - icon-maskable-512.png
+   - apple-touch-icon.png
+
+3. Espera 1-3 minutos a que GitHub Pages publique los cambios.
+
+4. En Android abre en Chrome:
+   https://disenosstreaming.github.io/cmr/mobile.html
+
+5. Si ya habías abierto una versión anterior, cierra la pestaña y vuelve a abrirla.
+   Si aún ves algo antiguo, borra los datos del sitio/caché de disenosstreaming.github.io una sola vez.
+
+El nuevo mobile.html incluye un botón “Instalar app” en el login y en Ajustes.
