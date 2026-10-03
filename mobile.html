@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1a6b47">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="CRM">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>CRM · Móvil</title>
@@ -1021,6 +1026,11 @@ onAuthStateChanged(auth,user=>{
   if(user){$('auth').style.display='none';$('app').style.display='block';listen();}
   else{unsubs.forEach(u=>u());unsubs=[];contacts={};$('auth').style.display='flex';$('app').style.display='none';stack.slice().forEach(closeSheet);}
 });
+
+// ═══ WEBAPP (instalable) ═══
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>
