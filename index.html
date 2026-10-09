@@ -2685,6 +2685,43 @@ function renderBulkBar(){
   else bar.classList.remove('show');
 }
 
+window.copySelectedPhones=async function(){
+  if(sel.size===0){toast('Selecciona contactos primero');return;}
+  const numbers=[...new Set([...sel].flatMap(id=>{
+    const c=contacts[id];
+    return c?getPhones(c).map(normalizePeruWhatsAppPhone):[];
+  }).filter(Boolean))];
+  if(numbers.length===0){toast('Los contactos seleccionados no tienen teléfonos');return;}
+  const text=numbers.join('\n');
+  let copied=false;
+  try{
+    if(navigator.clipboard&&window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      copied=true;
+    }
+  }catch(e){}
+  if(!copied){
+    const ta=document.createElement('textarea');
+    ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0;width:1px;height:1px;';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    try{copied=document.execCommand('copy');}catch(e){}
+    document.body.removeChild(ta);
+  }
+  if(copied)toast(`📋 ${numbers.length} teléfonos copiados con código de país ✓`);
+  else toast('No se pudo copiar. Revisa el permiso del portapapeles.');
+};
+function normalizePeruWhatsAppPhone(value){
+  const raw=String(value||'').trim();
+  let digits=raw.replace(/\D/g,'');
+  if(!digits)return '';
+  if(raw.startsWith('+'))return '+'+digits;
+  if(digits.startsWith('00'))return '+'+digits.slice(2);
+  if(digits.startsWith('51')&&digits.length>=11)return '+'+digits;
+  if(digits.length===9&&digits.startsWith('9'))return '+51'+digits;
+  if(digits.startsWith('0'))return '+51'+digits.slice(1);
+  if(digits.length>=11)return '+'+digits;
+  return '+51'+digits;
+}
 // DYN FIELDS
 function buildDynFields(cid,values,ph){
   const c=document.getElementById(cid);c.innerHTML='';
@@ -3831,6 +3868,7 @@ if(saved){
         </div>
         <div class="bulk-bar" id="bulk-bar">
           <span id="bulk-count"></span>
+          <button class="btn" onclick="copySelectedPhones()">📋 Copiar teléfonos seleccionados</button>
           <button class="btn" style="border-color:#1a6b47;color:#1a5c38;font-weight:500" onclick="bulkAviso()">📢 Aviso a seleccionados</button>
           <button class="btn green" onclick="openBulkMove()">Cambiar estado</button>
           <button class="btn ghost" onclick="clearSel()">Cancelar selección</button>
